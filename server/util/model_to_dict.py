@@ -3,7 +3,11 @@
 from google.appengine.ext import db
 
 import datetime
+import json
 import time
+
+from util import db_properties
+
 
 SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 
@@ -17,7 +21,11 @@ def ModelToDict(model):
   for key, prop in model.properties().iteritems():
     value = getattr(model, key)
 
-    if value is None or isinstance(value, SIMPLE_TYPES):
+    if value is None:
+      output[key] = value
+    elif isinstance(prop, db_properties.JsonProperty):
+      output[key] = json.loads(value)
+    elif isinstance(value, SIMPLE_TYPES):
       output[key] = value
     elif isinstance(value, datetime.date):
       # Convert date/datetime to ms-since-epoch ("new Date()").
@@ -27,7 +35,7 @@ def ModelToDict(model):
     elif isinstance(value, db.GeoPt):
       output[key] = {'lat': value.lat, 'lon': value.lon}
     elif isinstance(value, db.Model):
-      output[key] = to_dict(value)
+      output[key] = ModelToDict(value)
     else:
       raise ValueError('cannot encode ' + repr(prop))
 

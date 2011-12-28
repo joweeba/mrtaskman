@@ -2,8 +2,9 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
-
 from google.appengine.ext import db
+
+from util import db_properties
 
 
 class TaskStates(object):
@@ -32,7 +33,7 @@ class Task(db.Model):
   """
   # Set when a task is created.
   name = db.StringProperty(required=True)
-  config = db.TextProperty(required=True)
+  config = db_properties.JsonProperty(required=True)
   scheduled_by = db.UserProperty(required=False)
   scheduled_time = db.DateTimeProperty(required=False, auto_now_add=True)
   state = db.StringProperty(

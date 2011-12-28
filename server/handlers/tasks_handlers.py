@@ -86,8 +86,8 @@ class TasksHandler(webapp2.RequestHandler):
     logging.info(task.name)
 
     self.response.headers['Content-Type'] = 'application/json'
-    self.response.out.write(
-        json.dumps(model_to_dict.ModelToDict(task), indent=2))
+    json.dump(model_to_dict.ModelToDict(task), self.response.out, indent=2)
+    self.response.out.write('\n')
 
   def delete(self, task_id):
     """Removes a single task given by task_id."""
