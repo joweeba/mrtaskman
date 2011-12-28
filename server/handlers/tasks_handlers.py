@@ -12,6 +12,7 @@ import urllib
 import webapp2
 
 from models import tasks
+from util import model_to_dict
 
 
 class TasksScheduleHandler(webapp2.RequestHandler):
@@ -71,12 +72,6 @@ class TasksScheduleHandler(webapp2.RequestHandler):
     self.response.out.write('{id: \'%s\'}' % task_id)
 
 
-def Indent2Spaces(string):
-  """Takes a presumably JSON string and returns it after indenting a level."""
-  lines = string.split('\n')
-  return '\n  '.join(lines[:-1])
-
-
 class TasksHandler(webapp2.RequestHandler):
   def get(self, task_id):
     """Retrieves a single task given by task_id."""
@@ -91,22 +86,8 @@ class TasksHandler(webapp2.RequestHandler):
     logging.info(task.name)
 
     self.response.headers['Content-Type'] = 'application/json'
-    # TODO(jeffc): Move JSON-serialization into tasks module.
-    self.response.out.write(u''.join([
-        '{\n',
-        '  "type": "mrtaskman#task",\n',
-        '  "name": "', task.name, '",\n',
-        '  "id": "', str(task_id), '",\n',
-        '  "scheduled_by": "', task.scheduled_by or '', '",\n', 
-        '  "scheduled_time": "',
-            '{:%Y-%m-%d %H:%M:%S}'.format(task.scheduled_time), '",\n',
-        '  "state": "', task.state, '",\n',
-        '  "attempts": ', str(task.attempts), ',\n',
-        '  "max_attempts": ', str(task.max_attempts), ',\n',
-        '  "config": ',
-            Indent2Spaces(task.config.encode('utf-8')), ',\n',
-        '}\n',
-    ]))
+    self.response.out.write(
+        json.dumps(model_to_dict.ModelToDict(task), indent=2))
 
   def delete(self, task_id):
     """Removes a single task given by task_id."""
