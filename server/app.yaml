@@ -11,8 +11,10 @@ builtins:
 handlers:
 
 # Tasks.
-- url: /tasks/schedule
-  script: handlers.tasks_handlers.app
 - url: /tasks/[0-9]+
-  script: handlers.tasks_handlers.app
+  script: handlers.tasks.app
+- url: /tasks/assign
+  script: handlers.tasks.app
+- url: /tasks/schedule
+  script: handlers.tasks.app
 
