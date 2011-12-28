@@ -126,7 +126,60 @@ class TasksAssignHandler(webapp2.RequestHandler):
 
   def put(self):
     # TODO(jeff.carollo): Specify request and response format."""
-    pass
+    body = self.request.body.decode('utf-8')
+    if body is None:
+      self.response.out.write('AssignRequest is required in message body\n')
+      self.response.set_status(400)
+      return
+
+    assign_request = urllib.unquote(body)
+    logging.info('assign_request: %s', assign_request)
+
+    try:
+      parsed_request = json.loads(assign_request)
+      if not parsed_request:
+        raise Exception('json could not parse AssignRequest.')
+    except Exception, e:
+      self.response.out.write('Failure parsing AssignRequest.\n')
+      self.response.out.write(e)
+      self.response.out.write('\n')
+      self.response.set_status(400)
+      return
+
+    # TODO(jeff.carollo): Make these real objects with validate methods.
+    try:
+      worker = parsed_request['worker']
+    except KeyError, e:
+      self.response.out.write('AssignRequest.worker is required.\n')
+      self.response.out.write(e)
+      self.response.out.write('\n')
+      self.response.set_status(400)
+      return
+
+    try:
+      executor_capabilities = parsed_request['capabilities']['executor']
+    except KeyError, e:
+      self.response.out.write(
+          'AssignRequest.capabilities.executor is required.\n')
+      self.response.out.write(e)
+      self.response.out.write('\n')
+      self.response.set_status(400)
+      return
+
+    self.response.headers['Content-Type'] = 'application/json'
+    response = dict()
+    response['kind'] = 'TaskAssignment'
+    response['tasks'] = []
+
+    task = tasks.Assign(worker, executor_capabilities)
+
+    if task is not None:
+      task_dict = model_to_dict.ModelToDict(task)
+      task_dict['kind'] = 'mrtaskman#task'
+      response['tasks'] = [task_dict]
+
+    json.dump(response, self.response.out, indent=2)
+    self.response.out.write('\n')
 
 
 app = webapp2.WSGIApplication([

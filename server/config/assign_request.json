@@ -1,0 +1,7 @@
+{
+  "kind": "mrtaskman#assignrequest",
+  "worker": "AndroidWorker1of1",
+  "capabilities": {
+    "executor": ["Android3.0", "Android4.0"]
+  }
+}

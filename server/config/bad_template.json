@@ -4,7 +4,7 @@
   "task": {
     "name": "AndroidMonkey",
     "requirements": {
-      "executor": ["Android3.0", "Android4.0"]
+      "executor": []
     },
     "command": "./android_monkey.py",
     "timeout": "300s"
