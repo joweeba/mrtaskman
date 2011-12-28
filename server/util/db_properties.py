@@ -12,12 +12,12 @@ class JsonProperty(db.TextProperty):
 
   def get_value_for_datastore(self, model_instance):
     result = super(JsonProperty, self).get_value_for_datastore(model_instance)
-    result = simplejson.dumps(result)
+    result = json.dumps(result)
     return db.Text(result)
 
   def make_value_from_datastore(self, value):
     try:
-      value = simplejson.loads(str(value))
+      value = json.loads(str(value))
     except:
       pass
 
