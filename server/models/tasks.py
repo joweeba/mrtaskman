@@ -44,6 +44,7 @@ class Task(db.Model):
       default=TaskStates.SCHEDULED)
   attempts = db.IntegerProperty(required=True, default=1)
   max_attempts = db.IntegerProperty(required=True, default=3)
+  executor_requirements = db.StringListProperty(required=True)
 
   # Set once state == TaskStates.ASSIGNED.
   assigned_time = db.DateTimeProperty(required=False)
@@ -58,12 +59,13 @@ class Task(db.Model):
   result = db.ReferenceProperty(TaskResult)
 
 
-def Schedule(name, config, scheduled_by):
+def Schedule(name, config, scheduled_by, executor_requirements):
   """Adds a new task with given name, config and user."""
   def tx():
     task = Task(name=name,
                 config=config,
-                scheduled_by=scheduled_by)
+                scheduled_by=scheduled_by,
+                executor_requirements=executor_requirements)
     db.put(task)
     return task
   return db.run_in_transaction(tx)

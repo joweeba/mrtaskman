@@ -53,9 +53,26 @@ class TasksScheduleHandler(webapp2.RequestHandler):
       self.response.set_status(400)
       return
 
+    try:
+      executor_requirements = parsed_config['task']['requirements']['executor']
+      assert executor_requirements
+      assert isinstance(executor_requirements, list)
+    except KeyError, e:
+      self.response.out.write('Failure parsing config.\n')
+      self.response.out.write('task.requirements.executor is required\n')
+      self.response.set_status(400)
+      return
+    except AssertionError, e:
+      self.response.out.write('Failure parsing config.\n')
+      self.response.out.write(
+          'task.requirements.executor must be a non-empty list of strings.\n')
+      self.response.set_status(400)
+      return
+
     user = users.GetCurrentUser()
 
-    scheduled_task = tasks.Schedule(name, config, scheduled_by=user)
+    scheduled_task = tasks.Schedule(
+        name, config, user, executor_requirements)
     
     try:
       email = user.email()
@@ -104,7 +121,6 @@ class TasksHandler(webapp2.RequestHandler):
     # 200 OK.
 
 
-# Ignore for this code review.
 class TasksAssignHandler(webapp2.RequestHandler):
   """Handles /tasks/assign, which hands off tasks to workers."""
 
