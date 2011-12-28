@@ -1,5 +1,3 @@
-#!usr/bin/python
-
 """Handlers for the MrTaskman Tasks API."""
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
@@ -19,6 +17,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
   """Handles the creation of a new Task, also known as scheduling."""
 
   def post(self):
+    """TODO(jeff.carollo): Specify request and response format."""
     content_type = self.request.headers['Content-Type']
     if 'application/json' not in content_type:
       logging.info('Content-Type: %s', content_type)
@@ -28,7 +27,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
 
     body = self.request.body.decode('utf-8')
     if body is None:
-      self.response.out.write('config is required in message body\n')
+      self.response.out.write('Config is required in message body\n')
       self.response.set_status(400)
       return
 
@@ -37,7 +36,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
 
     try:
       parsed_config = json.loads(config)
-      if parsed_config is None:
+      if not parsed_config:
         raise Exception('json could not parse config.')
     except Exception, e:
       self.response.out.write('Failure parsing config.\n')
@@ -68,13 +67,19 @@ class TasksScheduleHandler(webapp2.RequestHandler):
         email, name, task_id)
     logging.info('Config: %s', config)
 
+    # Success. Write response.
     self.response.headers['Content-Type'] = 'application/json'
-    self.response.out.write('{id: \'%s\'}' % task_id)
+    response = dict()
+    response['id'] = task_id
+    response['kind'] = 'mrtaskman#taskid'
+    json.dump(response, self.response.out, indent=2)
+    self.response.out.write('\n')
 
 
 class TasksHandler(webapp2.RequestHandler):
   def get(self, task_id):
     """Retrieves a single task given by task_id."""
+    # TODO(jeff.carollo): Specify request and response format."""
     task_id = int(task_id)
     task = tasks.GetById(task_id)
 
@@ -86,8 +91,9 @@ class TasksHandler(webapp2.RequestHandler):
     logging.info(task.name)
 
     self.response.headers['Content-Type'] = 'application/json'
-    self.response.out.write(
-        json.dumps(model_to_dict.ModelToDict(task), indent=2))
+    response = model_to_dict.ModelToDict(task)
+    response['kind'] = 'mrtaskman#task'
+    json.dump(response, self.response.out, indent=2)
 
   def delete(self, task_id):
     """Removes a single task given by task_id."""
@@ -104,6 +110,7 @@ class TasksAssignHandler(webapp2.RequestHandler):
   """Handles /tasks/assign, which hands off tasks to workers."""
 
   def put(self):
+    # TODO(jeff.carollo): Specify request and response format."""
     pass
 
 

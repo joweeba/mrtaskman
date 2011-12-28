@@ -2,7 +2,6 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
-
 from google.appengine.ext import db
 
 
