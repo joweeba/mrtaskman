@@ -2,10 +2,12 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+from google.appengine.api import taskqueue
 from google.appengine.ext import db
 
 import datetime
 import logging
+import webapp2
 
 from util import db_properties
 
@@ -18,6 +20,7 @@ class TaskStates(object):
 
 class TaskOutcomes(object):
   SUCCESS = 'success'
+  TIMED_OUT = 'timed_out'
   FAILED = 'failed'
 
 
@@ -58,12 +61,14 @@ class Task(db.Model):
   outcome = db.StringProperty(
       required=False,
       choices=(TaskOutcomes.SUCCESS,
+               TaskOutcomes.TIMED_OUT,
                TaskOutcomes.FAILED))
   result = db.ReferenceProperty(TaskResult)
 
 
 def MakeParentKey():
   return db.Key.from_path('TaskParent', '0')
+
 
 def Schedule(name, config, scheduled_by, executor_requirements):
   """Adds a new Task with given name, config, user and requirements."""
@@ -80,7 +85,8 @@ def Schedule(name, config, scheduled_by, executor_requirements):
 
 def GetById(task_id):
   """Retrieves Task with given integer task_id."""
-  return Task.get_by_id(task_id)
+  key = db.Key.from_path('TaskParent', '0', 'Task', task_id)
+  return db.get(key)
 
 
 def DeleteById(task_id):
@@ -117,12 +123,69 @@ def Assign(worker, executor_capabilities):
         task.state = TaskStates.ASSIGNED
         task.assigned_time = datetime.datetime.now()
         task.assigned_worker = worker
+        task.attempts += 1
         logging.info('Assigning task %s to %s for %s.',
                      task.key().id_or_name(),
                      worker,
                      executor_capability)
         db.put(task)
         logging.info('Assignment successful.')
+        ScheduleTaskTimeout(task)
         return task
     return None
   return db.run_in_transaction(tx)
+
+
+def ScheduleTaskTimeout(task):
+  """Schedules a timeout for the given assigned Task.
+  
+  Called by Assign to enforce Task timeouts.
+  """
+  timeout = datetime.timedelta(minutes=15)  # Default of 15 minutes.
+  # TODO(jeff.carollo): Implement variable task timeout.
+
+  timeout_task = taskqueue.Task(
+      eta=(datetime.datetime.now() + timeout),
+      method='POST',
+      params={'task_key': task.key(),
+              'task_attempt': task.attempts},
+      url='/tasks/timeout')
+  timeout_task.add(transactional=True)
+
+
+class TaskTimeoutHandler(webapp2.RequestHandler):
+  """Handles Task timeout firing.
+  
+  A Task may have completed successfully before the handler fires,
+  in which case a timeout did not occur and this handler will not
+  modify the completed Task.
+  """
+  def post(self):
+    task_key = self.request.get('task_key')
+    task_attempt = int(self.request.get('task_attempt'))
+    assert task_key
+
+    def tx():
+      task = db.get(task_key)
+      if not task:
+        logging.info('Timed out Task %s was deleted.', task_key)
+        return
+      if (task.state == TaskStates.ASSIGNED and
+          task.attempts == task_attempt):
+        if task.attempts >= task.max_attempts:
+          task.state = TaskStates.COMPLETE
+          task.outcome = TaskOutcomes.TIMED_OUT
+          db.put(task)
+        else:
+          # Remember to enforce uploading task outcome to check
+          # both state and attempts.
+          task.state = TaskStates.SCHEDULED
+          # task.assigned_worker intentionally left so we can see
+          # who timed out.
+          db.put(task)
+    db.run_in_transaction(tx)
+
+
+app = webapp2.WSGIApplication([
+    ('/tasks/timeout', TaskTimeoutHandler)
+    ], debug=True)

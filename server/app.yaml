@@ -17,4 +17,6 @@ handlers:
   script: handlers.tasks.app
 - url: /tasks/schedule
   script: handlers.tasks.app
+- url: /tasks/timeout
+  script: models.tasks.app
 
