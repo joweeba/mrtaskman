@@ -19,6 +19,8 @@ handlers:
   script: handlers.tasks.app
 - url: /tasks/timeout
   script: models.tasks.app
+- url: /taskresultfiles/.+
+  script: handlers/taskresultfiles.py
 
 # Packages.
 - url: /packages/create

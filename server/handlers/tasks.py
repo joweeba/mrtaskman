@@ -3,7 +3,9 @@
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
 from google.appengine.api import users
+from google.appengine.ext.blobstore import blobstore
 
+import cgi
 import json
 import logging
 import urllib
@@ -120,6 +122,92 @@ class TasksHandler(webapp2.RequestHandler):
       return
     # 200 OK.
 
+  def post(self, task_id):
+    """Uploads results of a task, including STDOUT and STDERR."""
+    logging.info('Request: %s', self.request.body)
+    task_id = int(task_id)
+
+    blob_infos = self.GetBlobInfosFromPostBody()
+
+    task_result = self.request.get('task_result', None)
+    if task_result:
+      task_result = urllib.unquote(task_result.decode('utf-8'))
+    if task_result:
+      try:
+        task_result = json.loads(task_result, 'utf-8')
+      except ValueError, e:
+        self.response.out.write('Field "task_result" must be valid JSON.\n')
+        logging.info(e)
+        task_result = None
+    if not task_result:
+      self.DeleteAllBlobs(blob_infos)
+      self.response.out.write('Field "task_result" is required.\n')
+      self.response.set_status(400)
+      return
+
+    # Get required attempt and exit_code.
+    try:
+      # TODO(jeff.carollo): Make attempt a required path parameter,
+      # and make it restful by delivering it in the tasks.assign response.
+      attempt = task_result['attempt']
+      exit_code = task_result['exit_code']
+      assert isinstance(attempt, int)
+      assert isinstance(exit_code, int)
+    except KeyError, AssertionError:
+      self.DeleteAllBlobs(blob_infos)
+      self.response.out.write(
+          'task_result must contain integers "attempt" and "exit_code".')
+      self.response.set_status(400)
+      return
+    
+    # Get optional execution_time.
+    execution_time = task_result.get('execution_time', None)
+
+    # Get optional blobs for STDOUT and STDERR.
+    stdout = blob_infos.get('STDOUT', None)
+    stderr = blob_infos.get('STDERR', None)
+    stdout_download_url = self.MakeTaskResultFileDownloadUrl(stdout)
+    stderr_download_url = self.MakeTaskResultFileDownloadUrl(stderr)
+
+    try:
+      tasks.UploadTaskResult(task_id, attempt, exit_code,
+                             execution_time, stdout, stderr,
+                             stdout_download_url, stderr_download_url)
+    except tasks.TaskNotFoundError:
+      self.DeleteAllBlobs(blob_infos)
+      self.response.out.write('Task %d does not exist.' % task_id)
+      self.response.set_status(404)
+      return
+    except tasks.TaskTimedOutError:
+      self.DeleteAllBlobs(blob_infos)
+      self.response.out.write('Response for task %d timed out' % task_id)
+      self.response.set_status(400)
+      return
+    
+    # 200 OK.
+    
+  def MakeTaskResultFileDownloadUrl(self, blob_info):
+    """Creates a download URL for the given blob.
+
+    Args:
+      blob_info: A blobstore.BlobInfo, or None.
+
+    Returns:
+      A download path as str, or None if blob_info was None.
+    """
+    if not blob_info:
+      return None
+    return '/taskresultfiles/%s' % blob_info.key()
+
+  # TODO(jeff.carollo): Extract into common base class.
+  def GetBlobInfosFromPostBody(self):
+    """Returns a dict of {'form_name': blobstore.BlobInfo}."""
+    blobs = {}
+    for (field_name, field_storage) in self.request.POST.items():
+      if isinstance(field_storage, cgi.FieldStorage):
+        blobs[field_name] = blobstore.parse_blob_info(field_storage)
+    return blobs 
+
 
 class TasksAssignHandler(webapp2.RequestHandler):
   """Handles /tasks/assign, which hands off tasks to workers."""
@@ -177,9 +265,15 @@ class TasksAssignHandler(webapp2.RequestHandler):
       task_dict = model_to_dict.ModelToDict(task)
       task_dict['kind'] = 'mrtaskman#task'
       response['tasks'] = [task_dict]
+      response['task_complete_url'] = self.MakeTaskCompleteUrl(task)
 
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
+
+  def MakeTaskCompleteUrl(self, task):
+    """Returns a URL for a worker to POST to when done with given Task."""
+    task_id = int(task.key().id())
+    return blobstore.create_upload_url('/tasks/%d' % task_id)
 
 
 app = webapp2.WSGIApplication([

@@ -4,12 +4,25 @@ __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
 from google.appengine.api import taskqueue
 from google.appengine.ext import db
+from google.appengine.ext.blobstore import blobstore
 
 import datetime
 import logging
 import webapp2
 
 from util import db_properties
+
+
+class Error(Exception):
+  pass
+
+
+class TaskNotFoundError(Error):
+  pass
+
+
+class TaskTimedOutError(Error):
+  pass
 
 
 class TaskStates(object):
@@ -28,8 +41,10 @@ class TaskResult(db.Model):
   """The results of a Task, including logs and execution time."""
   exit_code = db.IntegerProperty(required=True)
   execution_time = db.FloatProperty(required=False)
-  stdout = db.TextProperty(required=False)
-  stderr = db.TextProperty(required=False)
+  stdout = blobstore.BlobReferenceProperty(required=False)
+  stderr = blobstore.BlobReferenceProperty(required=False)
+  stdout_download_url = db.TextProperty(required=False)
+  stderr_download_url = db.TextProperty(required=True)
 
 
 class Task(db.Model):
@@ -134,6 +149,46 @@ def Assign(worker, executor_capabilities):
         return task
     return None
   return db.run_in_transaction(tx)
+
+
+def UploadTaskResult(task_id, attempt, exit_code,
+                     execution_time, stdout, stderr,
+                     stdout_download_url, stderr_download_url):
+  logging.info('Trying to upload result for task %d attempt %d',
+               task_id, attempt)
+  def tx():
+    task = GetById(task_id)
+
+    # Validate that task is in a state to accept results from worker.
+    if not task:
+      raise TaskNotFoundError()
+    if task.attempts != attempt:
+      raise TaskTimedOutError()
+    # Here we allow a timed out task to publish results if it hasn't
+    # been scheduled to another worker yet.
+    if task.state not in [TaskStates.ASSIGNED, TaskStates.SCHEDULED]:
+      raise TaskTimedOutError()
+
+    # Mark task as complete and place results.
+    task.completed_time = datetime.datetime.now()
+    if exit_code == 0:
+      task.outcome = TaskOutcomes.SUCCESS
+    else:
+      task.outcome = TaskOutcomes.FAILED
+    task.state = TaskStates.COMPLETE
+
+    task_result = TaskResult(parent=task,
+                             exit_code=exit_code,
+                             execution_time=execution_time,
+                             stdout=stdout,
+                             stderr=stderr,
+                             stdout_download_url=stdout_download_url,
+                             stderr_download_url=stderr_download_url)
+    task_result = db.put(task_result)
+
+    task.result = task_result
+    db.put(task)
+  db.run_in_transaction(tx)
 
 
 def ScheduleTaskTimeout(task):
