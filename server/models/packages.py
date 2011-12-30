@@ -82,7 +82,20 @@ def CreatePackage(name, version, created_by, files):
 def GetPackageByNameAndVersion(name, version):
   return db.get(MakePackageKey(name, version))
 
+
 def GetPackageFilesByPackageNameAndVersion(name, version):
   package_key = MakePackageKey(name, version)
   # Beyond 10 files or so, people would be better off tar'ing stuff up.
   return PackageFile.all().ancestor(package_key).fetch(limit=1000) or []
+
+
+def DeletePackageByNameAndVersion(name, version):
+  def tx():
+    package_key = MakePackageKey(name, version)
+    package_keys = [package_key]
+    package_keys.extend(
+        PackageFile.all(keys_only=True)
+                   .ancestor(package_key)
+                   .fetch(limit=1000))
+    db.delete(package_keys)
+  return db.run_in_transaction(tx)

@@ -192,8 +192,12 @@ class PackagesHandler(webapp2.RequestHandler):
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
 
+  def delete(self, package_name, package_version):
+    """Deletes a package and its associated blobs."""
+    packages.DeletePackageByNameAndVersion(package_name, package_version))
+
 
 app = webapp2.WSGIApplication([
     ('/packages/create', PackagesCreateHandler),
-    ('/packages/([a-zA-Z]+)\.([0-9.]+)', PackagesHandler),
+    ('/packages/([a-zA-Z]+)\.([0-9\.]+)', PackagesHandler),
     ], debug=True)
