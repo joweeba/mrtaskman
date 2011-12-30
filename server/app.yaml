@@ -20,3 +20,7 @@ handlers:
 - url: /tasks/timeout
   script: models.tasks.app
 
+# Packages.
+- url: /packages/create
+  script: handlers.packages.app
+

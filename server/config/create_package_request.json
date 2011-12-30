@@ -1,0 +1,19 @@
+{
+  "kind": "mrtaskman#create_package_request",
+  "name": "PackageName",
+  "version": "1",
+  "files": [
+    {
+      "kind": "mrtaskman#form_file",
+      "form_name": "file1",
+      "file_destination": "data/input.txt",
+      "file_mode": "644"
+    },
+    {
+      "kind": "mrtaskman#form_file",
+      "form_name": "file2",
+      "file_destination": "android_monkey.py",
+      "file_mode": "755"
+    }
+  ]
+}

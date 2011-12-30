@@ -35,7 +35,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
     logging.info('Config: %s', config)
 
     try:
-      parsed_config = json.loads(config)
+      parsed_config = json.loads(config, 'utf-8')
       if not parsed_config:
         raise Exception('json could not parse config.')
     except Exception, e:
