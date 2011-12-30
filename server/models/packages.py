@@ -12,6 +12,15 @@ import webapp2
 from util import db_properties
 
 
+class Error(Exception):
+  def __init__(self):
+    Exception.__init__(self)
+
+
+class DuplicatePackageError(Error):
+  pass
+
+
 class PackageFile(db.Model):
   """A reference to a file in blobstore along with manifest information."""
   blob = blobstore.BlobReferenceProperty(required=True)
@@ -19,6 +28,7 @@ class PackageFile(db.Model):
   destination = db.TextProperty(required=True)
   # Mode of file.  755 for an executable, for instance.
   file_mode = db.TextProperty(required=True)
+  download_url = db.TextProperty(required=True)
 
 
 class Package(db.Model):
@@ -46,6 +56,10 @@ def CreatePackage(name, version, created_by, files):
   package_key = MakePackageKey(name, version)
 
   def tx():
+    package = db.get(package_key)
+    if package is not None:
+      raise DuplicatePackageError()
+
     package = Package(key=package_key,
                       name=name,
                       version=version,
@@ -54,21 +68,22 @@ def CreatePackage(name, version, created_by, files):
     db.put(package)
 
     package_files = []
-    for (blob_info, destination, file_mode) in files:
+    for (blob_info, destination, file_mode, download_url) in files:
       # TODO(jeff.carollo): Create PackageFile.key from destination.
       package_files.append(PackageFile(parent=package_key,
                                        destination=destination,
                                        file_mode=file_mode,
+                                       download_url=download_url,
                                        blob=blob_info))
     db.put(package_files)
     return package
   return db.run_in_transaction(tx)
 
 
-def GetPackage(name, version):
+def GetPackageByNameAndVersion(name, version):
   return db.get(MakePackageKey(name, version))
 
-def GetPackageFiles(name, version):
+def GetPackageFilesByPackageNameAndVersion(name, version):
   package_key = MakePackageKey(name, version)
   # Beyond 10 files or so, people would be better off tar'ing stuff up.
-  return PackageFile.all(parent=package_key).fetch(limit=1000)
+  return PackageFile.all().ancestor(package_key).fetch(limit=1000) or []

@@ -1,0 +1,29 @@
+"""PackageFile download handler."""
+
+__author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
+
+from google.appengine.ext import blobstore
+from google.appengine.ext import webapp
+from google.appengine.ext.webapp import blobstore_handlers
+from google.appengine.ext.webapp.util import run_wsgi_app
+
+
+class PackageFileDownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
+  def get(self, file_key):
+    if not blobstore.get(file_key):
+      self.error(404)
+    else:
+      self.send_blob(file_key)
+
+
+application = webapp.WSGIApplication([
+    ('/packagefiles/(.+)', PackageFileDownloadHandler),
+    ], debug=True)
+
+
+def main():
+  run_wsgi_app(application)
+
+
+if __name__ == '__main__':
+  main()

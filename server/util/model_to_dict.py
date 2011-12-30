@@ -1,6 +1,7 @@
 """Converts AppEngine db.Model's to JSON."""
 
 from google.appengine.ext import db
+from google.appengine.ext.blobstore import blobstore
 
 import datetime
 import json
@@ -34,6 +35,9 @@ def ModelToDict(model):
       output[key] = int(ms)
     elif isinstance(value, db.GeoPt):
       output[key] = {'lat': value.lat, 'lon': value.lon}
+    elif isinstance(prop, blobstore.BlobReferenceProperty):
+      # TODO: Implement this if it's needed.
+      output[key] = 'UnimplementedBlobRef'
     elif isinstance(value, db.Model):
       output[key] = ModelToDict(value)
     else:

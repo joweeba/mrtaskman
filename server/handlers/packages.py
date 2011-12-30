@@ -38,6 +38,7 @@ class PackagesCreateHandler(webapp2.RequestHandler):
     # with Javascript.  Possibly have it generate manifest.
 
     upload_url = blobstore.create_upload_url('/packages/create')
+    # TODO(jeff.carollo): Extract out to Django templates.
     self.response.out.write(
         """
         <html><head><title>Package Creator</title></head><body>
@@ -86,13 +87,19 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       package_name = manifest['name']
       package_version = manifest['version']
     except KeyError:
-      self.DeleteAllBlobs(blob_infos)
       self.response.out.write('Package "name" and "version" are required.')
       self.response.set_status(400)
       return
       
-    package = packages.CreatePackage(package_name, package_version,
-                                     users.get_current_user(), files)
+    try:
+      package = packages.CreatePackage(package_name, package_version,
+                                       users.get_current_user(), files)
+    except packages.DuplicatePackageError:
+      self.DeleteAllBlobs(blob_infos)
+      self.response.out.write('Package %s.%s already exists.' % (
+                                  package_name, package_version))
+      self.response.set_status(400)
+      return
 
     if not package:
       self.response.out.write('Unable to create package (unknown reason).')
@@ -121,7 +128,9 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       blob_info.delete()
 
   def MakeFilesListFromManifestAndBlobs(self, manifest, blob_infos):
-    """Returns a list of (blob_info, destination, file_mode) from inputs."""
+    """Returns a list of (blob_info, destination, file_mode, download_url)
+    from inputs.
+    """
     files = []
     for form_file in manifest['files']:
       try:
@@ -145,10 +154,42 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       except KeyError:
         raise MissingFileFromFormError('Missing form value for %s' % form_name)
 
-      files.append((blob_info, destination, file_mode))
+      download_url = '/packagefiles/%s' % blob_info.key()
+      files.append((blob_info, destination, file_mode, download_url))
+
     return files
+
+
+class PackagesHandler(webapp2.RequestHandler):
+  """Handles all methods of the form /package/{id}."""
+
+  def get(self, package_name, package_version):
+    """Retrieves basic info about a package."""
+    package = packages.GetPackageByNameAndVersion(
+        package_name, package_version)
+    if not package:
+      self.response.set_status(404)
+      return
+
+    package_files = packages.GetPackageFilesByPackageNameAndVersion(
+        package_name, package_version)
+
+    response = model_to_dict.ModelToDict(package)
+    response['kind'] = 'mrtaskman#package'
+    response_files = []
+    for package_file in package_files:
+      file_info = model_to_dict.ModelToDict(package_file)
+      file_info['kind'] = 'mrtaskman#file_info'
+      del file_info['blob']
+      response_files.append(file_info)
+    response['files'] = response_files
+
+    self.response.headers['Content-Type'] = 'application/json'
+    json.dump(response, self.response.out, indent=2)
+    self.response.out.write('\n')
 
 
 app = webapp2.WSGIApplication([
     ('/packages/create', PackagesCreateHandler),
+    ('/packages/([a-zA-Z]+)\.([0-9\.]+)', PackagesHandler),
     ], debug=True)
