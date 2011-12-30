@@ -199,5 +199,5 @@ class PackagesHandler(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/packages/create', PackagesCreateHandler),
-    ('/packages/([a-zA-Z]+)\.([0-9\.]+)', PackagesHandler),
+    ('/packages/([a-zA-Z]+)\.([0-9.]+)', PackagesHandler),
     ], debug=True)
