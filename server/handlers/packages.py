@@ -46,7 +46,8 @@ class PackagesCreateHandler(webapp2.RequestHandler):
               method="POST" enctype="multipart/form-data">
           Upload File1: <input type="file" name="file1"/><br/>
           Upload File2: <input type="file" name="file2"/><br/>
-          Manifest: <input type="textarea" name="manifest" rows="40" cols="80"/><br/> 
+          Manifest: <input type="textarea" name="manifest"
+                           rows="40" cols="80"/><br/> 
           <input type="submit" name="submit" value="Submit"/>
         </form>
         </body></html>
@@ -66,12 +67,12 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       try:
         manifest = json.loads(manifest, 'utf-8')
       except ValueError, e:
-        self.response.out.write('Field "manifest" must be valid JSON.')
+        self.response.out.write('Field "manifest" must be valid JSON.\n')
         logging.info(e)
         manifest = None
     if not manifest:
       self.DeleteAllBlobs(blob_infos)
-      self.response.out.write('Field "manifest" is required.')
+      self.response.out.write('Field "manifest" is required.\n')
       self.response.set_status(400)
       return
 
@@ -87,7 +88,8 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       package_name = manifest['name']
       package_version = manifest['version']
     except KeyError:
-      self.response.out.write('Package "name" and "version" are required.')
+      self.DeleteAllBlobs(blob_infos)
+      self.response.out.write('Package "name" and "version" are required.\n')
       self.response.set_status(400)
       return
       
@@ -96,13 +98,13 @@ class PackagesCreateHandler(webapp2.RequestHandler):
                                        users.get_current_user(), files)
     except packages.DuplicatePackageError:
       self.DeleteAllBlobs(blob_infos)
-      self.response.out.write('Package %s.%s already exists.' % (
+      self.response.out.write('Package %s.%s already exists.\n' % (
                                   package_name, package_version))
       self.response.set_status(400)
       return
 
     if not package:
-      self.response.out.write('Unable to create package (unknown reason).')
+      self.response.out.write('Unable to create package (unknown reason).\n')
       self.DeleteAllBlobs(blob_infos)
       self.response.set_status(500)
 
@@ -128,8 +130,10 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       blob_info.delete()
 
   def MakeFilesListFromManifestAndBlobs(self, manifest, blob_infos):
-    """Returns a list of (blob_info, destination, file_mode, download_url)
-    from inputs.
+    """Creates a list of tuples needed by packages.CreatePackage.
+    
+    Returns:
+      List of (blob_info, destination, file_mode, download_url).
     """
     files = []
     for form_file in manifest['files']:
@@ -191,5 +195,5 @@ class PackagesHandler(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/packages/create', PackagesCreateHandler),
-    ('/packages/([a-zA-Z]+)\.([0-9\.]+)', PackagesHandler),
+    ('/packages/([a-zA-Z]+)\.([0-9.]+)', PackagesHandler),
     ], debug=True)

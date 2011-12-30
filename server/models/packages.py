@@ -13,8 +13,7 @@ from util import db_properties
 
 
 class Error(Exception):
-  def __init__(self):
-    Exception.__init__(self)
+  pass
 
 
 class DuplicatePackageError(Error):

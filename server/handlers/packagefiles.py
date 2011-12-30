@@ -1,4 +1,10 @@
-"""PackageFile download handler."""
+"""PackageFile download handler.
+
+This module uses blobstore_handlers, which is webapp1 stuff.
+No available AppEngine documentation talks about having a webapp2
+equivalent for doing blobstore_handlers.BlobstoreDownloadHandler.send_blob.
+This should all be converted to webapp2 when send_blob becomes available.
+"""
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
