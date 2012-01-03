@@ -50,20 +50,41 @@ class PackagesCreateHandler(webapp2.RequestHandler):
     # with Javascript.  Possibly have it generate manifest.
 
     upload_url = blobstore.create_upload_url('/packages/create')
-    # TODO(jeff.carollo): Extract out to Django templates.
-    self.response.out.write(
-        """
-        <html><head><title>Package Creator</title></head><body>
-        <form id="package" action="%s"
-              method="POST" enctype="multipart/form-data">
-          Upload File1: <input type="file" name="file1"/><br/>
-          Upload File2: <input type="file" name="file2"/><br/>
-          Manifest: <input type="textarea" name="manifest"
-                           rows="40" cols="80"/><br/> 
-          <input type="submit" name="submit" value="Submit"/>
-        </form>
-        </body></html>
-        """ % upload_url)
+
+    content_type = self.GetAcceptTypeHtmlOrJson()
+    self.response.headers['Content-Type'] = content_type
+
+    if 'html' in content_type:
+      # TODO(jeff.carollo): Extract out to Django templates.
+      self.response.out.write(
+          """
+          <html><head><title>Package Creator</title></head><body>
+          <form id="package" action="%s"
+                method="POST" enctype="multipart/form-data">
+            Upload File1: <input type="file" name="file1"/><br/>
+            Upload File2: <input type="file" name="file2"/><br/>
+            Manifest: <input type="textarea" name="manifest"
+                             rows="40" cols="80"/><br/> 
+            <input type="submit" name="submit" value="Submit"/>
+          </form>
+          </body></html>
+          """ % upload_url)
+      self.response.out.write('\n')
+      return
+
+    if 'json' in content_type:
+      response = dict()
+      response['kind'] = 'mrtaskman#get_upload_url_response'
+      response['upload_url'] = upload_url
+      json.dump(response, self.response.out, indent=2)
+      self.response.out.write('\n')
+      return
+
+    # Should never get here.
+    logging.error('Sending 500 because we could not determine a Content-Type.')
+    self.response.out.write('Accept type not text/html or application/json.')
+    self.response.set_status(500)
+    return
 
   def post(self):
     """Called following blobstore writes with blob_keys replacing file data."""
@@ -120,10 +141,30 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       self.DeleteAllBlobs(blob_infos)
       self.response.set_status(500)
 
+    self.response.headers['Content-Type'] = 'application/json'
     response = model_to_dict.ModelToDict(package)
     response['kind'] = 'mrtaskman#create_package_response'
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
+
+  def GetAcceptTypeHtmlOrJson(self):
+    """Parses Accept header and determines whether to send HTML or JSON.
+
+    Defaults to 'application/json' unless HTML comes first in Accept line.
+
+    Returns:
+      Accept type as str.
+    """
+    accept = self.request.headers.get('Accept', '')
+    accepts = accept.split(';')
+    accept = 'application/json'
+    for candidate_accept in accepts:
+      if 'json' in candidate_accept:
+        break
+      if 'html' in candidate_accept:
+        accept = 'text/html'
+        break
+    return accept
 
   def GetBlobInfosFromPostBody(self):
     """Returns a dict of {'form_name': blobstore.BlobInfo}."""
