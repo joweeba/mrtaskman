@@ -194,7 +194,7 @@ class PackagesHandler(webapp2.RequestHandler):
 
   def delete(self, package_name, package_version):
     """Deletes a package and its associated blobs."""
-    packages.DeletePackageByNameAndVersion(package_name, package_version))
+    packages.DeletePackageByNameAndVersion(package_name, package_version)
 
 
 app = webapp2.WSGIApplication([
