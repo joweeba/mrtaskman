@@ -1,0 +1,12 @@
+{
+  "kind": "mrtaskman#config",
+  "files": [],
+  "task": {
+    "name": "LS",
+    "requirements": {
+      "executor": ["macos"]
+    },
+    "command": "ls -l",
+    "timeout": "300s"
+  }
+}

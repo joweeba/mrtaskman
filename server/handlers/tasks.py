@@ -197,6 +197,14 @@ class TasksHandler(webapp2.RequestHandler):
       return
     
     # 200 OK.
+
+  def DeleteAllBlobs(self, blob_infos):
+    """Deletes all blobs referenced in this request.
+
+    Should be called whenever post() returns a non-200 response.
+    """
+    for (_, blob_info) in blob_infos.items():
+      blob_info.delete()
     
   def MakeTaskResultFileDownloadUrl(self, blob_info):
     """Creates a download URL for the given blob.
@@ -266,18 +274,15 @@ class TasksAssignHandler(webapp2.RequestHandler):
       self.response.set_status(400)
       return
 
-    self.response.headers['Content-Type'] = 'application/json'
-    response = dict()
-    response['kind'] = 'TaskAssignment'
-    response['tasks'] = []
-
     task = tasks.Assign(worker, executor_capabilities)
 
-    if task is not None:
-      task_dict = model_to_dict.ModelToDict(task)
-      task_dict['kind'] = 'mrtaskman#task'
-      response['tasks'] = [task_dict]
-      response['task_complete_url'] = self.MakeTaskCompleteUrl(task)
+    self.response.headers['Content-Type'] = 'application/json'
+    if task is None:
+      return
+
+    response = model_to_dict.ModelToDict(task)
+    response['kind'] = 'mrtaskman#task'
+    response['task_complete_url'] = self.MakeTaskCompleteUrl(task)
 
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
