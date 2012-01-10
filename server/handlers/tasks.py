@@ -205,7 +205,16 @@ class TasksHandler(webapp2.RequestHandler):
     """
     for (_, blob_info) in blob_infos.items():
       blob_info.delete()
-    
+
+  def GetBaseUrl(self, url):
+    """Returns 'http://foo.com' from 'http://foo.com/bar/baz?foobar'.
+
+    TODO(jeff.carollo): Extract into utility.
+    """
+    import urlparse
+    split = urlparse.urlsplit(url)
+    return '%s://%s' % (split.scheme, split.netloc)
+
   def MakeTaskResultFileDownloadUrl(self, blob_info):
     """Creates a download URL for the given blob.
 
@@ -217,7 +226,8 @@ class TasksHandler(webapp2.RequestHandler):
     """
     if not blob_info:
       return None
-    return '/taskresultfiles/%s' % blob_info.key()
+    return '%s/taskresultfiles/%s' % (
+        self.GetBaseUrl(self.request.url), blob_info.key())
 
   # TODO(jeff.carollo): Extract into common base class.
   def GetBlobInfosFromPostBody(self):

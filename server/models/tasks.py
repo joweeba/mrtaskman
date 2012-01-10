@@ -175,10 +175,12 @@ def UploadTaskResult(task_id, attempt, exit_code,
     if not task:
       raise TaskNotFoundError()
     if task.attempts != attempt:
+      logging.info('Attempts: %d, attempt: %d', task.attempts, attempt)
       raise TaskTimedOutError()
     # Here we allow a timed out task to publish results if it hasn't
     # been scheduled to another worker yet.
     if task.state not in [TaskStates.ASSIGNED, TaskStates.SCHEDULED]:
+      logging.info('task.state: %s', task.state)
       raise TaskTimedOutError()
 
     # Mark task as complete and place results.

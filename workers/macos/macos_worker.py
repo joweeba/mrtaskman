@@ -22,7 +22,8 @@ import StringIO
 import subprocess
 import sys
 import time
-import urlparse
+
+from common import http_file_upload
 
 
 class MacOsWorker(object):
@@ -31,12 +32,26 @@ class MacOsWorker(object):
   def __init__(self,
                mrtaskman_host='mrtaskman.appspot.com',
                mrtaskman_port=None):
+    self.mrtaskman_host = mrtaskman_host
+    self.mrtaskman_port = mrtaskman_port
     self.worker_name_ = 'MacOsWorker1of1'
     self.hostname_ = 'leonardo'
     self.executors_ = {'macos': self.ExecuteMacosTask}
     self.connection_ = httplib.HTTPConnection(mrtaskman_host, mrtaskman_port,
                                               timeout=None)
     self.connection_.connect()
+
+  def MakeTaskUrl(self, task_id):
+    """Returns the URL to the task given by task_id.
+
+    TODO(jeff.carollo): Extract into common API utility.
+    """
+    if self.mrtaskman_port:
+      return 'http://%s:%s/tasks/%s' % (
+          self.mrtaskman_host, self.mrtaskman_port, task_id)
+    else:
+      return 'http://%s/tasks/%s' % (
+          self.mrtaskman_host, task_id)
 
   def AssignTask(self):
     """Makes a request to /tasks/assign to get assigned a task.
@@ -73,58 +88,35 @@ class MacOsWorker(object):
       return task 
     return None
 
-  def ExtractUrlPath(self, url):
-    split = urlparse.urlsplit(url)
-    return split.path
-
   def SendResponse(self, response_url, stdout, stderr, task_result):
-    response_url = self.ExtractUrlPath(response_url)    
-    print 'url_path: %s\n' % response_url
-    task_result_json = json.dumps(task_result, 'utf-8', indent=2)
-    BOUNDARY = u'------FORM_BOUNDARY--------'
-    headers = {}
-    headers['Content-Type'] = 'multipart/form-data; boundary=%s' % BOUNDARY
-    BOUNDARY = u'--%s' % BOUNDARY
-    body = u'\r\n'.join([
-        BOUNDARY,
-        u'Content-Disposition: form-data; name="task_result"',
-        '',
-        task_result_json,
-        BOUNDARY,
-        u'Content-Disposition: form-data; name="STDOUT"; filename="stdout"',
-        u'Content-Type: application/octet-stream',
-        u'',
-        stdout,
-        BOUNDARY,
-        u'Content-Disposition: form-data; name="STDERR"; filename="stderr"',
-        u'Content-Type: application/octet-stream',
-        u'',
-        stderr,
-        BOUNDARY])
+    http_response = http_file_upload.SendMultipartHttpFormData(
+        response_url, 'POST', {},
+        [{'name': 'task_result',
+          'Content-Type': 'application/json; charset=utf-8',
+          'data': json.dumps(task_result, 'utf-8', indent=2)}],
+        [{'name': 'STDOUT',
+          'filename': 'stdout',
+          'data': stdout},
+         {'name': 'STDERR',
+          'filename': 'stderr',
+          'data': stderr}])
 
-    logging.info('Body:\n%s', body)
-
-    self.connection_.request(
-        method='POST',
-        url=response_url,
-        body=body,
-        headers=headers)
-
-    response = self.connection_.getresponse()
-    response_json = response.read()
-    status = response.status
-    logging.info('response status: %d', status)
-    logging.info('response body: %s', response_json)
-    if status == 200 and response_json:
-      response_json = response_json.decode('utf-8')
-      parsed_response = json.loads(response_json, 'utf-8')
-      return parsed_response
-    return None
+    try:
+      response = http_response.read()
+      task_id = task_result['task_id']
+      logging.info('Successfully sent response for task %s: %s',
+                   task_id, self.MakeTaskUrl(task_id))
+      return
+    except urllib2.HTTPError, error_response:
+      body = error_response.read()
+      code = error_response.code
+      logging.warning('SendResponse HTTPError code %d\n%s',
+                      code, body)
 
   def PollAndExecute(self):
     while True:
       logging.info('Attempting to get a task.')
-      task = self.AssignTask()     
+      task = self.AssignTask()
       
       if not task:
         logging.info('No task. Sleeping.')
@@ -183,7 +175,7 @@ class MacOsWorker(object):
     results = {
       'kind': 'mrtaskman#task_complete_request',
       'task_id': task_id,
-      'attempt': 1,
+      'attempt': attempt,
       'exit_code': exit_code,
       'execution_time': 5.0
     }
@@ -191,17 +183,14 @@ class MacOsWorker(object):
 
   def RunCommandRedirectingStdoutAndStderrWithTimeout(
       self, command, timeout):
-    # TODO: Run command.
-    stdout = file('/tmp/stdout', 'r', 0)
-    stderr = file('/tmp/stderr', 'r', 0)
     process = subprocess.Popen(args=command,
                                shell=True,
-                               stdout=stdout,
-                               stderr=stderr)
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
     # TODO: Implement timeout.
     while None == process.poll():
       time.sleep(0.02)
-    return (process.returncode, stdout, stderr)
+    return (process.returncode, process.stdout, process.stderr)
 
   def DownloadAndStageFiles(self, files):
     logging.info('Staging files: %s', files)

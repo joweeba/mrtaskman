@@ -6,7 +6,7 @@
     "requirements": {
       "executor": ["macos"]
     },
-    "command": "ls -l",
+    "command": "/bin/pwd",
     "timeout": "300s"
   }
 }
