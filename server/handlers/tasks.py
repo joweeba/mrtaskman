@@ -152,7 +152,7 @@ class TasksHandler(webapp2.RequestHandler):
         logging.info(e)
         task_result = None
     if not task_result:
-      self.DeleteAllBlobs(blob_infos)
+      self.DeleteBlobs(blob_infos)
       self.response.out.write('Field "task_result" is required.\n')
       self.response.set_status(400)
       return
@@ -166,7 +166,7 @@ class TasksHandler(webapp2.RequestHandler):
       assert isinstance(attempt, int)
       assert isinstance(exit_code, int)
     except KeyError, AssertionError:
-      self.DeleteAllBlobs(blob_infos)
+      self.DeleteBlobs(blob_infos)
       self.response.out.write(
           'task_result must contain integers "attempt" and "exit_code".')
       self.response.set_status(400)
@@ -186,20 +186,20 @@ class TasksHandler(webapp2.RequestHandler):
                              execution_time, stdout, stderr,
                              stdout_download_url, stderr_download_url)
     except tasks.TaskNotFoundError:
-      self.DeleteAllBlobs(blob_infos)
+      self.DeleteBlobs(blob_infos)
       self.response.out.write('Task %d does not exist.' % task_id)
       self.response.set_status(404)
       return
     except tasks.TaskTimedOutError:
-      self.DeleteAllBlobs(blob_infos)
+      self.DeleteBlobs(blob_infos)
       self.response.out.write('Response for task %d timed out' % task_id)
       self.response.set_status(400)
       return
     
     # 200 OK.
 
-  def DeleteAllBlobs(self, blob_infos):
-    """Deletes all blobs referenced in this request.
+  def DeleteBlobs(self, blob_infos):
+    """Deletes blobs referenced in this request.
 
     Should be called whenever post() returns a non-200 response.
     """

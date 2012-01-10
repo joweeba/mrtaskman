@@ -19,8 +19,6 @@ TODO(jeff.carollo): Add file and http stream support.
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
 import logging
-import urllib
-import urlparse
 import urllib2
 
 
