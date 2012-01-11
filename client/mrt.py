@@ -208,10 +208,10 @@ COMMANDS:
   task {id}\t\tRetrieve information on given task id.
   tasks\t\t\tList available tasks.
 
-  createpackage {manifest}\tCreate a new package with given manifest.
-  deletepackage {name.version}\tDelete package with given name and version.
-  package {name.version}\tRetrieve information on given package.
-  packages\t\t\tList existing packages.""")
+  createpackage {manifest}\t Create a new package with given manifest.
+  deletepackage {name} {version} Delete package with given name and version.
+  package {name} {version}\t Retrieve information on given package.
+  packages\t\t\t List existing packages.""")
 
 
 # Mapping of command text to command function.

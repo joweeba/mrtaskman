@@ -3,6 +3,11 @@
   "files": [],
   "task": {
     "name": "LS",
+    "packages": [{
+      "kind": "mrtaskman#packageref",
+      "name": "MacOsTestPackage",
+      "version": 1
+    }],
     "requirements": {
       "executor": ["macos"]
     },

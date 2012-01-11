@@ -211,10 +211,20 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       except KeyError:
         raise MissingFileFromFormError('Missing form value for %s' % form_name)
 
-      download_url = '/packagefiles/%s' % blob_info.key()
+      download_url = '%s/packagefiles/%s' % (
+          self.GetBaseUrl(self.request.url), blob_info.key())
       files.append((blob_info, destination, file_mode, download_url))
 
     return files
+
+  def GetBaseUrl(self, url):
+    """Returns 'http://foo.com' from 'http://foo.com/bar/baz?foobar'.
+
+    TODO(jeff.carollo): Extract into utility.
+    """
+    import urlparse
+    split = urlparse.urlsplit(url)
+    return '%s://%s' % (split.scheme, split.netloc)
 
 
 class PackagesHandler(webapp2.RequestHandler):

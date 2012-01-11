@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 
+import package_installer
 from common import http_file_upload
 
 
@@ -80,8 +81,6 @@ class MacOsWorker(object):
     response = self.connection_.getresponse()
     response_json = response.read()
     status = response.status
-    logging.info('response status: %d', status)
-    logging.info('response body: %s', response_json)
     if status == 200 and response_json:
       response_json = response_json.decode('utf-8')
       task = json.loads(response_json, 'utf-8')
@@ -123,7 +122,7 @@ class MacOsWorker(object):
         time.sleep(10)
         continue
 
-      logging.info('Got a task: %s', task)
+      logging.info('Got a task:\n%s\n', json.dumps(task, 'utf-8', indent=2))
 
       config = task['config']
       task_id = task['id']
@@ -156,30 +155,45 @@ class MacOsWorker(object):
   def ExecuteMacosTask(self, task_id, attempt, task, config):
     logging.info('Executing macos task %s', task_id)
 
-    # Download the files we need from the server.
-    files = config['files']
-    self.DownloadAndStageFiles(files)
+    try:
+      tmpdir = package_installer.TmpDir()
 
-    # We probably don't want to run forever.
-    timeout = config['task']['timeout']
+      # Download the files we need from the server.
+      files = config['files']
+      self.DownloadAndStageFiles(files)
 
-    # Get our command and execute it.
-    command = config['task']['command']
+      # Install any packages we might need.
+      packages = []
+      try:
+        packages = config['task']['packages']
+      except KeyError:
+        logging.info('No packages.')
+        pass
+      self.DownloadAndInstallPackages(packages, tmpdir)
 
-    (exit_code, stdout, stderr) = (
-        self.RunCommandRedirectingStdoutAndStderrWithTimeout(
-            command, timeout))
+      # We probably don't want to run forever.
+      timeout = config['task']['timeout']
 
-    logging.info('Executed %s with result %s', command, exit_code)
+      # Get our command and execute it.
+      command = config['task']['command']
 
-    results = {
-      'kind': 'mrtaskman#task_complete_request',
-      'task_id': task_id,
-      'attempt': attempt,
-      'exit_code': exit_code,
-      'execution_time': 5.0
-    }
-    return (results, stdout, stderr)
+      (exit_code, stdout, stderr) = (
+          self.RunCommandRedirectingStdoutAndStderrWithTimeout(
+              command, timeout))
+
+      logging.info('Executed %s with result %s', command, exit_code)
+
+      results = {
+        'kind': 'mrtaskman#task_complete_request',
+        'task_id': task_id,
+        'attempt': attempt,
+        'exit_code': exit_code,
+        'execution_time': 5.0
+      }
+      return (results, stdout, stderr)
+    finally:
+      #tmpdir.CleanUp()
+      pass
 
   def RunCommandRedirectingStdoutAndStderrWithTimeout(
       self, command, timeout):
@@ -196,10 +210,16 @@ class MacOsWorker(object):
     logging.info('Staging files: %s', files)
     # TODO: Stage files.
 
+  def DownloadAndInstallPackages(self, packages, tmpdir):
+    for package in packages:
+      package_installer.DownloadAndInstallPackage(
+          package['name'], package['version'],
+          tmpdir.GetTmpDir())
+
 
 def main(args):
   logging.basicConfig(level=logging.DEBUG)
-  macos_worker = MacOsWorker('localhost', 8080)
+  macos_worker = MacOsWorker('mrtaskman.appspot.com', None)
   # Run forever, executing tasks from the server when available.
   macos_worker.PollAndExecute()
 
