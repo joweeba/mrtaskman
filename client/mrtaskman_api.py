@@ -23,15 +23,15 @@ from common import http_file_upload
 
 
 FLAGS = gflags.FLAGS
-gflags.DEFINE_string('mrtaskman_server', 'http://mrtaskman.appspot.com',
+gflags.DEFINE_string('mrtaskman_address', 'http://mrtaskman.appspot.com',
                      'URL of MrTaskman server to connect to.')
 
 
 class MrTaskmanApi(object):
   """Client wrapper for MrTaskman REST API."""
 
-  def __init__(self, mrtaskman_server=FLAGS.mrtaskman_server):
-    self.mrtaskman_url = mrtaskman_server
+  def __init__(self, mrtaskman_address=FLAGS.mrtaskman_address):
+    self.mrtaskman_url = mrtaskman_address
 
 
   def GetTask(self, task_id):
@@ -49,7 +49,7 @@ class MrTaskmanApi(object):
     assert isinstance(task_id, int)
 
     path = '/tasks/%d' % task_id
-    url = FLAGS.mrtaskman_server + path
+    url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
     request = urllib2.Request(url, body, headers)
@@ -75,7 +75,7 @@ class MrTaskmanApi(object):
     # TODO(jeff.carollo): Validate config.
 
     path = '/tasks/schedule'
-    url = FLAGS.mrtaskman_server + path
+    url = FLAGS.mrtaskman_address + path
     body = json.dumps(config, indent=2).encode('utf-8')
     headers = {'Accept': 'application/json',
                'Content-Type': 'application/json'}
@@ -102,7 +102,7 @@ class MrTaskmanApi(object):
     assert isinstance(task_id, int)
 
     path = '/tasks/%d' % task_id
-    url = FLAGS.mrtaskman_server + path
+    url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
     request = urllib2.Request(url, body, headers)
@@ -112,6 +112,93 @@ class MrTaskmanApi(object):
     response.read()
     return
 
+  def AssignTask(self, worker, hostname, capabilities):
+    """Makes a request to /tasks/assign to get assigned a task.
+
+    Args:
+      worker: Unique name of worker as str
+      hostname: Hostname identifying this machine
+      capabilities: Dict describing capabilities of the worker
+
+    Returns:
+      Assigned mrtaskman#task object, or None if no tasks were available.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+
+    Example:
+      def PollForTask(self):
+        while True:
+          api = mrtaskman_api.MrTaskmanApi()
+          task = api.AssignTask('MacOsWorker1of10',
+                                'leonardo@mydomain',
+                                {
+                                  'executor': ['macos'],
+                                })
+          if not task:
+            time.sleep(10.)
+            continue
+          self.ExecuteTask(task)
+    """
+    assert worker
+    assert hostname
+    assert capabilities
+
+    # Construct /tasks/assign request to MrTaskman.
+    assign_request = dict()
+    assign_request['kind'] = 'mrtaskman#assign_request'
+    assign_request['worker'] = worker
+    assign_request['hostname'] = hostname
+    assign_request['capabilities'] = capabilities
+
+    path = '/tasks/assign'
+    url = FLAGS.mrtaskman_address + path
+    body = json.dumps(assign_request, indent=2).encode('utf-8')
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json'}
+    request = urllib2.Request(url, body, headers)
+    request.get_method = lambda: 'PUT'
+
+    response = urllib2.urlopen(request)
+    response_body = response.read()
+    if not response_body:
+      return None
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
+
+  def SendTaskResult(self, response_url, stdout, stderr, task_result):
+    """Submits the results of a task to a MrTaskman-provided response_url.
+
+    Args:
+      response_url: MrTaskman-provided URL for this task as str
+      stdout: Standard output of task as str
+      stderr: Standard error of task as str
+      task_result: mrtaskman#task_complete_request object for task
+
+    Returns:
+      None
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    http_response = http_file_upload.SendMultipartHttpFormData(
+        response_url, 'POST', {},
+        [{'name': 'task_result',
+          'Content-Type': 'application/json; charset=utf-8',
+          'data': json.dumps(task_result, 'utf-8', indent=2)}],
+        [{'name': 'STDOUT',
+          'filename': 'stdout',
+          'data': stdout},
+         {'name': 'STDERR',
+          'filename': 'stderr',
+          'data': stderr}])
+
+    response_body = http_response.read()
+
+  def MakeTaskUrl(self, task_id):
+    """Returns the URL to the task given by task_id."""
+    return '%s/tasks/%d' % (FLAGS.mrtaskman_address, task_id)
+ 
   def CreatePackage(self, create_package_request):
     """Performs a packages.create with given create_package_request.
 
@@ -130,7 +217,7 @@ class MrTaskmanApi(object):
     path = '/packages/create'
 
     # Get url to upload to.
-    url = FLAGS.mrtaskman_server + path
+    url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
     request = urllib2.Request(url, body, headers)
@@ -178,7 +265,7 @@ class MrTaskmanApi(object):
     assert isinstance(package_version, int)
 
     path = '/packages/%s.%d' % (package_name, package_version)
-    url = FLAGS.mrtaskman_server + path
+    url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
     request = urllib2.Request(url, body, headers)
@@ -205,7 +292,7 @@ class MrTaskmanApi(object):
     assert isinstance(package_version, int)
 
     path = '/packages/%s.%d' % (package_name, package_version)
-    url = FLAGS.mrtaskman_server + path
+    url = FLAGS.mrtaskman_address + path
     body = None
     headers = {}
     request = urllib2.Request(url, body, headers)

@@ -22,90 +22,48 @@ import StringIO
 import subprocess
 import sys
 import time
+import urllib2
 
+import gflags
 import package_installer
+from client import mrtaskman_api
 from common import http_file_upload
+
+
+FLAGS = gflags.FLAGS
 
 
 class MacOsWorker(object):
   """Executes macos tasks."""
 
-  def __init__(self,
-               mrtaskman_host='mrtaskman.appspot.com',
-               mrtaskman_port=None):
-    self.mrtaskman_host = mrtaskman_host
-    self.mrtaskman_port = mrtaskman_port
+  def __init__(self):
+    self.api_ = mrtaskman_api.MrTaskmanApi()
     self.worker_name_ = 'MacOsWorker1of1'
     self.hostname_ = 'leonardo'
-    self.executors_ = {'macos': self.ExecuteMacosTask}
-    self.connection_ = httplib.HTTPConnection(mrtaskman_host, mrtaskman_port,
-                                              timeout=None)
-    self.connection_.connect()
-
-  def MakeTaskUrl(self, task_id):
-    """Returns the URL to the task given by task_id.
-
-    TODO(jeff.carollo): Extract into common API utility.
-    """
-    if self.mrtaskman_port:
-      return 'http://%s:%s/tasks/%s' % (
-          self.mrtaskman_host, self.mrtaskman_port, task_id)
-    else:
-      return 'http://%s/tasks/%s' % (
-          self.mrtaskman_host, task_id)
+    self.capabilities_ = {'executor': ['macos']}
+    self.executors_ = {'macos': self.ExecuteTask}
 
   def AssignTask(self):
     """Makes a request to /tasks/assign to get assigned a task.
 
     Returns:
-      Parsed Task JSON if a task was assigned, or None.
+      Task if a task was assigned, or None.
     """
-    # Construct /tasks/assign request to MrTaskman.
-    assign_body = (
-        """
-        {
-          "kind": "mrtaskman#assign_request",
-          "worker": "%s",
-          "hostname": "%s",
-          "capabilities": {
-            "executor": ["macos"]
-          }
-        }
-        """ % (self.worker_name_, self.hostname_))
-    self.connection_.request(
-        method='PUT',
-        url='/tasks/assign',
-        body=assign_body,
-        headers={'Accept': 'application/json'})
-
-    response = self.connection_.getresponse()
-    response_json = response.read()
-    status = response.status
-    if status == 200 and response_json:
-      response_json = response_json.decode('utf-8')
-      task = json.loads(response_json, 'utf-8')
-      return task 
-    return None
+    try:
+      task = self.api_.AssignTask(self.worker_name_, self.hostname_,
+                                  self.capabilities_)
+      return task
+    except urllib2.HTTPError, e:
+      logging.info('Got %d HTTP response from MrTaskman on AssignTask.',
+                   e.code)
+      return None
 
   def SendResponse(self, response_url, stdout, stderr, task_result):
-    http_response = http_file_upload.SendMultipartHttpFormData(
-        response_url, 'POST', {},
-        [{'name': 'task_result',
-          'Content-Type': 'application/json; charset=utf-8',
-          'data': json.dumps(task_result, 'utf-8', indent=2)}],
-        [{'name': 'STDOUT',
-          'filename': 'stdout',
-          'data': stdout},
-         {'name': 'STDERR',
-          'filename': 'stderr',
-          'data': stderr}])
-
     try:
-      response = http_response.read()
+      self.api_.SendTaskResult(response_url, stdout, stderr, task_result)
       task_id = task_result['task_id']
       logging.info('Successfully sent response for task %s: %s',
-                   task_id, self.MakeTaskUrl(task_id))
-      return
+                   task_id, self.api_.MakeTaskUrl(task_id))
     except urllib2.HTTPError, error_response:
       body = error_response.read()
       code = error_response.code
@@ -143,7 +101,7 @@ class MacOsWorker(object):
         continue
 
       # We've got a valid executor, so use it.
-      # This will invoke ExecuteMacosTask below.
+      # This will invoke ExecuteTask below.
       (results, stdout, stderr) = executor(task_id, attempt, task, config)
 
       self.SendResponse(task_complete_url,
@@ -152,8 +110,8 @@ class MacOsWorker(object):
                         results)
       # Loop back up and poll for the next task.
  
-  def ExecuteMacosTask(self, task_id, attempt, task, config):
-    logging.info('Executing macos task %s', task_id)
+  def ExecuteTask(self, task_id, attempt, task, config):
+    logging.info('Executing task %s', task_id)
 
     try:
       tmpdir = package_installer.TmpDir()
@@ -217,11 +175,22 @@ class MacOsWorker(object):
           tmpdir.GetTmpDir())
 
 
-def main(args):
-  logging.basicConfig(level=logging.DEBUG)
-  macos_worker = MacOsWorker('mrtaskman.appspot.com', None)
-  # Run forever, executing tasks from the server when available.
-  macos_worker.PollAndExecute()
+def main(argv):
+  try:
+    argv = FLAGS(argv)
+  except gflags.FlagsError, e:
+    sys.stderr.write(Usage())
+    sys.stderr.write('%s\n' % e)
+    sys.exit(1)
+
+  try:
+    logging.basicConfig(level=logging.DEBUG)
+
+    macos_worker = MacOsWorker()
+    # Run forever, executing tasks from the server when available.
+    macos_worker.PollAndExecute()
+  finally:
+    logging.shutdown()
 
 
 if __name__ == '__main__':
