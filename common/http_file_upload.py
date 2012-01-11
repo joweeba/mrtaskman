@@ -85,6 +85,8 @@ def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
       body_parts.append(u'')
       try:
         data = file_piece['data']
+        if isinstance(data, file):
+          data = data.read()
       except KeyError:
         data = file(file_piece['filepath'], 'r').read()
       body_parts.append(data.encode('utf-8'))

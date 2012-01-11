@@ -51,7 +51,7 @@ def Task(argv):
     return 0
   except urllib2.HTTPError, e:
     sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
-                          e.code, e.read()))
+                     e.code, e.read()))
     return e.code
 
 
@@ -83,7 +83,7 @@ def Schedule(argv):
     return 0
   except urllib2.HTTPError, e:
     sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
-                          e.code, e.read()))
+                     e.code, e.read()))
     return e.code
 
 
@@ -163,7 +163,7 @@ def DeletePackage(argv):
     return 0
   except urllib2.HTTPError, e:
     sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
-                          e.code, e.read()))
+                     e.code, e.read()))
     return e.code
 
 
@@ -191,7 +191,55 @@ def Package(argv):
     return 0
   except urllib2.HTTPError, e:
     sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
-                          e.code, e.read()))
+                     e.code, e.read()))
+    return e.code
+
+
+def Stdout(argv):
+  return GetResultFile('stdout', argv)
+
+
+def Stderr(argv):
+  return GetResultFile('stderr', argv)
+
+
+def GetResultFile(command_name, argv):
+  try:
+    task_id = int(argv.pop(0))
+  except:
+    sys.stderr.write(
+        '%s command requires an integer task_id argument.\n' % command_name)
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    task = api.GetTask(task_id)
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+  if task['state'] != 'complete':
+    sys.stderr.write(
+        '%s not available for incomplete task %d\n' % (command_name, task_id))
+    return 1
+
+  try:
+    result = task['result']
+    download_url = result['%s_download_url' % command_name]
+  except KeyError:
+    sys.stderr.write(
+        'Task does not have results.%s_download_url.\n' % command_name)
+    return 1
+
+  try:
+    contents = urllib2.urlopen(download_url).read()
+    print contents.decode('utf-8')
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
     return e.code
 
 
@@ -215,6 +263,8 @@ COMMANDS:
   schedule {task_file}\tSchedules a new task from given task_file.
   task {id}\t\tRetrieve information on given task id.
   tasks\t\t\tList available tasks. (Not Implemented)
+  stdout {id}\t\tPrints stdout from completed task with given id.
+  stderr {id}\t\tPrints stderr from completed task with given id.
 
   createpackage {manifest}\t Create a new package with given manifest.
   deletepackage {name} {version} Delete package with given name and version.
@@ -229,6 +279,8 @@ COMMANDS = {
   'schedule': Schedule,
   'task': Task,
   'tasks': CommandNotImplemented,
+  'stdout': Stdout,
+  'stderr': Stderr,
   'createpackage': CreatePackage,
   'deletepackage': DeletePackage,
   'package': Package,

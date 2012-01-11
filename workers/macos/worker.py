@@ -18,6 +18,7 @@ __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 import httplib
 import json
 import logging
+import os
 import StringIO
 import subprocess
 import sys
@@ -72,6 +73,8 @@ class MacOsWorker(object):
 
   def PollAndExecute(self):
     while True:
+      # TODO(jeff.carollo): Wrap this in a catch-all Excepion handler that
+      # allows us to continue executing in the face of various task errors.
       logging.info('Attempting to get a task.')
       task = self.AssignTask()
       
@@ -91,22 +94,27 @@ class MacOsWorker(object):
       executor = None
       allowed_executors = config['task']['requirements']['executor']
       for allowed_executor in allowed_executors:
-        executor = self.executors_[allowed_executor]
+        try:
+          executor = self.executors_[allowed_executor]
+        except KeyError:
+          pass
         if executor is not None:
           break
       
       if executor is None:
-        logging.info('No matching executor from %s', allowed_executors)
-        # Send error response to server so that it knows we can't do this one.
-        continue
+        # TODO: Send error response to server.
+        # This is probably our fault - we said we could do something
+        # that we actually couldn't do.
+        logging.error('No matching executor from %s', allowed_executors)
+        raise Exception('No allowed executors matched our executors_:\n' +
+                        '%s\nvs.\n' % (allowed_executors, self.executors_))
 
       # We've got a valid executor, so use it.
-      # This will invoke ExecuteTask below.
       (results, stdout, stderr) = executor(task_id, attempt, task, config)
 
       self.SendResponse(task_complete_url,
-                        stdout.read(),
-                        stderr.read(),
+                        stdout,
+                        stderr,
                         results)
       # Loop back up and poll for the next task.
  
@@ -137,7 +145,7 @@ class MacOsWorker(object):
 
       (exit_code, stdout, stderr) = (
           self.RunCommandRedirectingStdoutAndStderrWithTimeout(
-              command, timeout))
+              command, timeout, tmpdir.GetTmpDir()))
 
       logging.info('Executed %s with result %s', command, exit_code)
 
@@ -150,25 +158,28 @@ class MacOsWorker(object):
       }
       return (results, stdout, stderr)
     finally:
-      #tmpdir.CleanUp()
-      pass
+      tmpdir.CleanUp()
 
   def RunCommandRedirectingStdoutAndStderrWithTimeout(
-      self, command, timeout):
+      self, command, timeout, cwd):
+    command = ' '.join([command, '>stdout', '2>stderr'])
     process = subprocess.Popen(args=command,
                                shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+                               cwd=cwd)
     # TODO: Implement timeout.
     while None == process.poll():
       time.sleep(0.02)
-    return (process.returncode, process.stdout, process.stderr)
+
+    stdout = file(os.path.join(cwd, 'stdout'), 'r')
+    stderr = file(os.path.join(cwd, 'stderr'), 'r')
+    return (process.returncode, stdout, stderr)
 
   def DownloadAndStageFiles(self, files):
-    logging.info('Staging files: %s', files)
+    logging.info('Not staging files: %s', files)
     # TODO: Stage files.
 
   def DownloadAndInstallPackages(self, packages, tmpdir):
+    # TODO(jeff.carollo): Create a package cache if things take off.
     for package in packages:
       package_installer.DownloadAndInstallPackage(
           package['name'], package['version'],
@@ -184,7 +195,8 @@ def main(argv):
     sys.exit(1)
 
   try:
-    logging.basicConfig(level=logging.DEBUG)
+    FORMAT = '%(asctime)-15s %(message)s'
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
     macos_worker = MacOsWorker()
     # Run forever, executing tasks from the server when available.
