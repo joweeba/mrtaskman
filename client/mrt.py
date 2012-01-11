@@ -103,7 +103,7 @@ def DeleteTask(argv):
     return 0
   except urllib2.HTTPError, e:
     sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
-                          e.code, e.read()))
+                     e.code, e.read()))
     return e.code
 
 
@@ -136,7 +136,7 @@ def CreatePackage(argv):
     return 0
   except urllib2.HTTPError, e:
     sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
-                          e.code, e.read()))
+                     e.code, e.read()))
     return e.code
 
 
@@ -147,6 +147,7 @@ def DeletePackage(argv):
     sys.stderr.write(
         'deletepackage command requires a string package name argument.\n')
     return 3
+
   try:
     package_id = int(argv.pop(0))
   except:
@@ -173,6 +174,7 @@ def Package(argv):
     sys.stderr.write(
         'package command requires a string package name argument.\n')
     return 3
+
   try:
     package_id = int(argv.pop(0))
   except:
@@ -193,6 +195,12 @@ def Package(argv):
     return e.code
 
 
+def CommandNotImplemented(argv):
+  """Dummy command which explains that a command is not yet implemented."""
+  sys.stderr.write('This command is not yet implemented.\n')
+  return 5
+
+
 def Usage():
   return (
 """mrt.py - MrTaskman client command-line utility.
@@ -206,12 +214,12 @@ COMMANDS:
   deletetask {id}\tDelete task with given id.
   schedule {task_file}\tSchedules a new task from given task_file.
   task {id}\t\tRetrieve information on given task id.
-  tasks\t\t\tList available tasks.
+  tasks\t\t\tList available tasks. (Not Implemented)
 
   createpackage {manifest}\t Create a new package with given manifest.
   deletepackage {name} {version} Delete package with given name and version.
   package {name} {version}\t Retrieve information on given package.
-  packages\t\t\t List existing packages.""")
+  packages\t\t\t List existing packages. (Not Implemented)""")
 
 
 # Mapping of command text to command function.
@@ -220,9 +228,11 @@ COMMANDS = {
   'deletetask': DeleteTask,
   'schedule': Schedule,
   'task': Task,
+  'tasks': CommandNotImplemented,
   'createpackage': CreatePackage,
   'deletepackage': DeletePackage,
   'package': Package,
+  'packages': CommandNotImplemented,
 }
 
 
