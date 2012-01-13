@@ -11,7 +11,7 @@
     "requirements": {
       "executor": ["macos"]
     },
-    "command": "/bin/pwd",
+    "command": "echo 'Hello World'",
     "timeout": "300s"
   }
 }

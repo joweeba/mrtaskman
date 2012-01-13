@@ -15,6 +15,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import datetime
 import httplib
 import json
 import logging
@@ -143,7 +144,7 @@ class MacOsWorker(object):
       # Get our command and execute it.
       command = config['task']['command']
 
-      (exit_code, stdout, stderr) = (
+      (exit_code, stdout, stderr, execution_time) = (
           self.RunCommandRedirectingStdoutAndStderrWithTimeout(
               command, timeout, tmpdir.GetTmpDir()))
 
@@ -154,7 +155,7 @@ class MacOsWorker(object):
         'task_id': task_id,
         'attempt': attempt,
         'exit_code': exit_code,
-        'execution_time': 5.0
+        'execution_time': execution_time.total_seconds()
       }
       return (results, stdout, stderr)
     finally:
@@ -163,16 +164,21 @@ class MacOsWorker(object):
   def RunCommandRedirectingStdoutAndStderrWithTimeout(
       self, command, timeout, cwd):
     command = ' '.join([command, '>stdout', '2>stderr'])
+
+    # TODO: More precise timing through process info.
+    begin_time = datetime.datetime.now()
     process = subprocess.Popen(args=command,
                                shell=True,
                                cwd=cwd)
     # TODO: Implement timeout.
     while None == process.poll():
       time.sleep(0.02)
+    finished_time = datetime.datetime.now()
+    execution_time = finished_time - begin_time
 
     stdout = file(os.path.join(cwd, 'stdout'), 'r')
     stderr = file(os.path.join(cwd, 'stderr'), 'r')
-    return (process.returncode, stdout, stderr)
+    return (process.returncode, stdout, stderr, execution_time)
 
   def DownloadAndStageFiles(self, files):
     logging.info('Not staging files: %s', files)
