@@ -7,15 +7,11 @@
   }],
   "files": [],
   "task": {
-    "name": "test",
+    "name": "timeout_test",
     "requirements": {
       "executor": ["macos"]
     },
-    "command": "echo 'Hello World' $FOO $BAR",
-    "env": {
-      "FOO": "foo",
-      "BAR": "bar"
-    },
-    "timeout": "300s"
+    "command": "sleep 100",
+    "timeout": "5s"
   }
 }

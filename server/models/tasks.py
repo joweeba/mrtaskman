@@ -19,10 +19,12 @@ from google.appengine.ext import db
 from google.appengine.ext.blobstore import blobstore
 
 import datetime
+import json
 import logging
 import webapp2
 
 from util import db_properties
+from util import parsetime
 
 
 class Error(Exception):
@@ -205,14 +207,28 @@ def UploadTaskResult(task_id, attempt, exit_code,
   db.run_in_transaction(tx)
 
 
+def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
+  """Returns task timeout as timedelta.
+  
+  Defaults to 15 minutes if no timeout is specified.
+
+  A worker is given 3 minutes longer than the task timeout to allow for
+  the overhead of downloading and installing packages.
+  """
+  config = task.config
+  parsed_config = json.loads(config)
+  timeout_str = parsed_config['task'].get('timeout', None)
+  if not timeout_str:
+    return default
+  return parsetime.ParseTimeDelta(timeout_str) + datetime.timedelta(minutes=3)
+
+
 def ScheduleTaskTimeout(task):
   """Schedules a timeout for the given assigned Task.
   
   Called by Assign to enforce Task timeouts.
   """
-  timeout = datetime.timedelta(minutes=15)  # Default of 15 minutes.
-  # TODO(jeff.carollo): Implement variable task timeout.
-
+  timeout = GetTaskTimeout(task)
   timeout_task = taskqueue.Task(
       eta=(datetime.datetime.now() + timeout),
       method='POST',

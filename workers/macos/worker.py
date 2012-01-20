@@ -30,6 +30,7 @@ import gflags
 import package_installer
 from client import mrtaskman_api
 from common import http_file_upload
+from common import parsetime
 
 
 FLAGS = gflags.FLAGS
@@ -73,15 +74,14 @@ class MacOsWorker(object):
                       code, body)
 
   def PollAndExecute(self):
+    logging.info('Polling for work...')
     while True:
       # TODO(jeff.carollo): Wrap this in a catch-all Excepion handler that
       # allows us to continue executing in the face of various task errors.
-      logging.info('Attempting to get a task.')
       task = self.AssignTask()
       
       if not task:
         try:
-          logging.info('No task. Sleeping.')
           time.sleep(10)
           continue
         except KeyboardInterrupt:
@@ -121,6 +121,7 @@ class MacOsWorker(object):
                         stdout,
                         stderr,
                         results)
+      logging.info('Polling for work...')
       # Loop back up and poll for the next task.
  
   def ExecuteTask(self, task_id, attempt, task, config):
@@ -130,20 +131,20 @@ class MacOsWorker(object):
       tmpdir = package_installer.TmpDir()
 
       # Download the files we need from the server.
-      files = config['files']
+      files = config.get('files', [])
       self.DownloadAndStageFiles(files)
 
       # Install any packages we might need.
-      packages = []
-      try:
-        packages = config['task']['packages']
-      except KeyError:
-        logging.info('No packages.')
-        pass
+      # TODO(jeff.carollo): Handle any exceptions raised here.
+      packages = config.get('packages', [])
       self.DownloadAndInstallPackages(packages, tmpdir)
 
-      # We probably don't want to run forever.
-      timeout = config['task']['timeout']
+      # We probably don't want to run forever. Default to 12 minutes.
+      timeout = config['task'].get('timeout', '12m')
+      timeout = parsetime.ParseTimeDelta(timeout)
+
+      # Get any environment variables to inject.
+      env = config['task'].get('env', {})
 
       # Get our command and execute it.
       command = config['task']['command']
@@ -151,7 +152,7 @@ class MacOsWorker(object):
       logging.info('Running command %s', command)
       (exit_code, stdout, stderr, execution_time) = (
           self.RunCommandRedirectingStdoutAndStderrWithTimeout(
-              command, timeout, tmpdir.GetTmpDir()))
+              command, env, timeout, tmpdir.GetTmpDir()))
 
       logging.info('Executed %s with result %d', command, exit_code)
 
@@ -167,22 +168,30 @@ class MacOsWorker(object):
       tmpdir.CleanUp()
 
   def RunCommandRedirectingStdoutAndStderrWithTimeout(
-      self, command, timeout, cwd):
+      self, command, env, timeout, cwd):
     command = ' '.join([command, '>stdout', '2>stderr'])
 
     # TODO: More precise timing through process info.
     begin_time = datetime.datetime.now()
+    timeout_time = begin_time + timeout
     process = subprocess.Popen(args=command,
+                               env=env,
                                shell=True,
                                cwd=cwd)
-    # TODO: Implement timeout.
-    while None == process.poll():
+
+    while None == process.poll() and (datetime.datetime.now() < timeout_time):
       time.sleep(0.02)
+
     finished_time = datetime.datetime.now()
+    if finished_time >= timeout_time and (None == process.poll()):
+      logging.info('command %s timed out.', command)
+      process.terminate()
+      process.wait()
+
     execution_time = finished_time - begin_time
 
-    stdout = file(os.path.join(cwd, 'stdout'), 'r')
-    stderr = file(os.path.join(cwd, 'stderr'), 'r')
+    stdout = file(os.path.join(cwd, 'stdout'), 'rb')
+    stderr = file(os.path.join(cwd, 'stderr'), 'rb')
     return (process.returncode, stdout, stderr, execution_time)
 
   def DownloadAndStageFiles(self, files):
