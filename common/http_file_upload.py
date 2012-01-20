@@ -18,7 +18,9 @@ TODO(jeff.carollo): Add file and http stream support.
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import base64
 import logging
+import mimetypes
 import urllib2
 
 
@@ -81,15 +83,18 @@ def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
       body_parts.append(
           u'Content-Disposition: form-data; name="%s"; filename="%s"' %
           (file_piece['name'], file_piece['filename']))
-      body_parts.append(u'Content-Type: application/octet-stream')
-      body_parts.append(u'')
       try:
         data = file_piece['data']
         if isinstance(data, file):
           data = data.read()
+        body_parts.append(u'Content-Type: application/octet-stream;charset=utf-8')
       except KeyError:
-        data = file(file_piece['filepath'], 'r').read()
-      body_parts.append(data.encode('utf-8'))
+        data = file(file_piece['filepath'], 'rb').read()
+        body_parts.append(u'Content-Type: %s;charset=utf-8' % (
+                              GetContentType(file_piece['filepath'])))
+      body_parts.append(u'Content-Transfer-Encoding: base64')
+      body_parts.append(u'')
+      body_parts.append(base64.b64encode(data).decode())
     except KeyError:
       logging.error('file_data pieces must contain "name" and "filename" ' +
                     'fields and either a "data" or "filepath" field.')
@@ -99,10 +104,15 @@ def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
   body_parts.append(BOUNDARY)
   body_parts.append(u'')
 
-  body = u'\r\n'.join(body_parts)
+  CRLF = u'\r\n'
+  body = CRLF.join(body_parts)
 
   request = urllib2.Request(url, body, headers)
   request.method = method
 
   response = urllib2.urlopen(request)
   return response
+
+
+def GetContentType(filename):
+  return mimetypes.guess_type(filename)[0] or 'application/octet-stream'

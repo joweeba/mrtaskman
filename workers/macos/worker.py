@@ -80,9 +80,13 @@ class MacOsWorker(object):
       task = self.AssignTask()
       
       if not task:
-        logging.info('No task. Sleeping.')
-        time.sleep(10)
-        continue
+        try:
+          logging.info('No task. Sleeping.')
+          time.sleep(10)
+          continue
+        except KeyboardInterrupt:
+          logging.info('Caught CTRL+C. Exiting.')
+          return
 
       logging.info('Got a task:\n%s\n', json.dumps(task, 'utf-8', indent=2))
 
@@ -120,7 +124,7 @@ class MacOsWorker(object):
       # Loop back up and poll for the next task.
  
   def ExecuteTask(self, task_id, attempt, task, config):
-    logging.info('Executing task %s', task_id)
+    logging.info('Recieved task %s', task_id)
 
     try:
       tmpdir = package_installer.TmpDir()
@@ -144,11 +148,12 @@ class MacOsWorker(object):
       # Get our command and execute it.
       command = config['task']['command']
 
+      logging.info('Running command %s', command)
       (exit_code, stdout, stderr, execution_time) = (
           self.RunCommandRedirectingStdoutAndStderrWithTimeout(
               command, timeout, tmpdir.GetTmpDir()))
 
-      logging.info('Executed %s with result %s', command, exit_code)
+      logging.info('Executed %s with result %d', command, exit_code)
 
       results = {
         'kind': 'mrtaskman#task_complete_request',

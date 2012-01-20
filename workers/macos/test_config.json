@@ -2,7 +2,7 @@
   "kind": "mrtaskman#config",
   "files": [],
   "task": {
-    "name": "LS",
+    "name": "test",
     "packages": [{
       "kind": "mrtaskman#packageref",
       "name": "MacOsTestPackage",
