@@ -145,6 +145,7 @@ class MacOsWorker(object):
 
       # Get any environment variables to inject.
       env = config['task'].get('env', {})
+      env = os.environ.update(env)
 
       # Get our command and execute it.
       command = config['task']['command']

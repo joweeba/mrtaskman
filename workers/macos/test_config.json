@@ -11,7 +11,7 @@
     "requirements": {
       "executor": ["macos"]
     },
-    "command": "echo 'Hello World' $FOO $BAR",
+    "command": "echo 'Hello World' $FOO $BAR $PATH",
     "env": {
       "FOO": "foo",
       "BAR": "bar"
