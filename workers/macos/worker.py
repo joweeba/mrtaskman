@@ -180,11 +180,13 @@ class MacOsWorker(object):
                                shell=True,
                                cwd=cwd)
 
-    while None == process.poll() and (datetime.datetime.now() < timeout_time):
+    ret = None
+    while None == ret and (datetime.datetime.now() < timeout_time):
       time.sleep(0.02)
+      ret = process.poll()
 
     finished_time = datetime.datetime.now()
-    if finished_time >= timeout_time and (None == process.poll()):
+    if finished_time >= timeout_time and (None == ret):
       logging.info('command %s timed out.', command)
       process.terminate()
       process.wait()
@@ -193,7 +195,7 @@ class MacOsWorker(object):
 
     stdout = file(os.path.join(cwd, 'stdout'), 'rb')
     stderr = file(os.path.join(cwd, 'stderr'), 'rb')
-    return (process.returncode, stdout, stderr, execution_time)
+    return (ret, stdout, stderr, execution_time)
 
   def DownloadAndStageFiles(self, files):
     logging.info('Not staging files: %s', files)

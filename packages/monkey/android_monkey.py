@@ -59,6 +59,7 @@ def CheckAdbSuccess(adb_output):
   """Cover the fail."""
   if 'Success' in adb_output:
     return
+  adb_output.returncode = -5
   raise subprocess.CalledProcessError(-1, 'adb', output=adb_output)
 
 
@@ -72,7 +73,7 @@ def main(argv):
     apk_file_path = argv.pop(0)
   except:
     sys.stderr.write('Must give apk_file_path as first argument.\n')
-    return -1
+    sys.exit(-1)
 
   FORMAT = '%(asctime)-15s %(message)s'
   logging.basicConfig(format=FORMAT, level=logging.DEBUG)
@@ -88,8 +89,8 @@ def main(argv):
       CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb install error %d:\n%s', e.returncode, e.output)
-      return e.returncode
-    
+      sys.exit(e.returncode)
+
     try:
       logging.info('Running command...')
       try:
@@ -99,7 +100,7 @@ def main(argv):
                               shell=True)
       except subprocess.CalledProcessError, e:
         logging.error('Error %d:\n%s', e.returncode, e.output)
-        return e.returncode
+        sys.exit(e.returncode)
     finally:
       logging.info('Uninstalling .apk...')
       try:
@@ -108,7 +109,7 @@ def main(argv):
         CheckAdbSuccess(output)
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
-        return e.returncode
+        sys.exit(e.returncode)
     
     logging.info('Monkey work done successfully.')
     return 0
