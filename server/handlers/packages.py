@@ -126,7 +126,7 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       self.response.set_status(400)
       return
 
-    urlfiles = manifest.get('urlfiles', None)
+    urlfiles = manifest.get('urlfiles', [])
       
     try:
       package = packages.CreatePackage(package_name, package_version,
