@@ -125,10 +125,12 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       self.response.out.write('Package "name" and "version" are required.\n')
       self.response.set_status(400)
       return
+
+    urlfiles = manifest.get('urlfiles', None)
       
     try:
       package = packages.CreatePackage(package_name, package_version,
-                                       users.get_current_user(), files)
+                                       users.get_current_user(), files, urlfiles)
     except packages.DuplicatePackageError:
       self.DeleteAllBlobs(blob_infos)
       self.response.out.write('Package %s.%s already exists.\n' % (

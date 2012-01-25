@@ -33,8 +33,14 @@ class DuplicatePackageError(Error):
 
 
 class PackageFile(db.Model):
-  """A reference to a file in blobstore along with manifest information."""
-  blob = blobstore.BlobReferenceProperty(required=True)
+  """A reference to a file in blobstore along with manifest information.
+  
+  Could also be a reference to a file somewhere on the web, in which case
+  there will be no blobstore info."""
+
+  # Must set either blob or url, but not both or neither.
+  blob = blobstore.BlobReferenceProperty(required=False)
+
   # Must include relative file path and file name of destination.
   destination = db.TextProperty(required=True)
   # Mode of file.  755 for an executable, for instance.
@@ -58,7 +64,7 @@ def MakePackageKey(name, version):
   return db.Key.from_path('Package', '%s^^^%s' % (name, version))
 
 
-def CreatePackage(name, version, created_by, files):
+def CreatePackage(name, version, created_by, files, urlfiles):
   if not name.isalpha():
     # TODO(jeff.carollo): Raise an appropriate Exception.
     logging.error('Must have alphabetic package name.')
@@ -79,6 +85,7 @@ def CreatePackage(name, version, created_by, files):
     db.put(package)
 
     package_files = []
+    # Create PackageFiles with blob refs.
     for (blob_info, destination, file_mode, download_url) in files:
       # TODO(jeff.carollo): Create PackageFile.key from destination.
       package_files.append(PackageFile(parent=package_key,
@@ -86,6 +93,13 @@ def CreatePackage(name, version, created_by, files):
                                        file_mode=file_mode,
                                        download_url=download_url,
                                        blob=blob_info))
+    # Create PackageFiles with urls instead of blobrefs.
+    for urlfile in urlfiles:
+      package_files.append(PackageFile(parent=package_key,
+                                       destination=urlfile['file_destination'],
+                                       file_mode=urlfile['file_mode'],
+                                       download_url=urlfile['url']))
+
     db.put(package_files)
     return package
   return db.run_in_transaction(tx)
