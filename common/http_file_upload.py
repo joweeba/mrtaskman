@@ -24,13 +24,11 @@ import mimetypes
 import urllib2
 
 
-def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
-  """Sends form data and files as HTTP multipart/form-data.
+def EncodeMultipartHttpFormData(headers, form_data, file_data):
+  """Encodes form data and files as HTTP multipart/form-data.
 
   Example:
-    SendMultipartHttpFormData(
-        'http://www.example.com/form/addfiles',
-        'POST',
+    EncodeMultipartHttpFormData(
         {'Cookie': 'sad;fkj239jskfjsadf'},
         [{'name': 'field1',
           'data': 'value1'},
@@ -44,15 +42,13 @@ def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
           'filepath': '/usr/local/bar.txt'}])
 
   Args:
-    url: Full url as str.
-    method: 'POST', 'PUT', etc as str.
     headers: Dict of {'header-name': 'header-value'} pairs.
     form_data: List of {'name': name, 'data': data} pairs.
     file_data: List of {'name': name, 'filename': filename, 'data': data}
                or {'name': name, 'filename': filename, 'filepath': filepath}.
   
   Returns:
-    urllib2.Response object. obj.code gives HTTP code. obj.read() has data.
+    Tuple of (Encoded request body as str, and modified headers as str).
   """
   BOUNDARY = u'------FORM_BOUNDARY--------'
 
@@ -106,7 +102,40 @@ def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
 
   CRLF = u'\r\n'
   body = CRLF.join(body_parts)
+  return (body, headers)
 
+
+def SendMultipartHttpFormData(url, method, headers, form_data, file_data):
+  """Sends form data and files as HTTP multipart/form-data.
+
+  Example:
+    SendMultipartHttpFormData(
+        'http://www.example.com/form/addfiles',
+        'POST',
+        {'Cookie': 'sad;fkj239jskfjsadf'},
+        [{'name': 'field1',
+          'data': 'value1'},
+         {'name': 'field2',
+          'data': 'value2'}],
+        [{'name': 'file_field_1',
+          'filename': 'foo.txt',
+          'data': 'file_data'},
+         {'name': 'file_field_2',
+          'filename': 'bar.txt',
+          'filepath': '/usr/local/bar.txt'}])
+
+  Args:
+    url: Full url as str.
+    method: 'POST', 'PUT', etc as str.
+    headers: Dict of {'header-name': 'header-value'} pairs.
+    form_data: List of {'name': name, 'data': data} pairs.
+    file_data: List of {'name': name, 'filename': filename, 'data': data}
+               or {'name': name, 'filename': filename, 'filepath': filepath}.
+  
+  Returns:
+    urllib2.Response object. obj.code gives HTTP code. obj.read() has data.
+  """
+  (body, headers) = EncodeMultipartHttpFormData(headers, form_data, file_data)
   request = urllib2.Request(url, body, headers)
   request.method = method
 

@@ -14,17 +14,64 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
-import gflags
+
 import json
 import logging
 import urllib2
 
-from common import http_file_upload
+try:
+  import gflags
+  FLAGS = gflags.FLAGS
+  gflags.DEFINE_string('mrtaskman_address', 'http://mrtaskman.appspot.com',
+                       'URL of MrTaskman server to connect to.')
+except ImportError:
+  # No gflags, use defaults.
+  class Flags(object):
+    mrtaskman_address = 'http://mrtaskman.appspot.com'
+  FLAGS = Flags()
+
+try:
+  from common import http_file_upload
+except ImportError:
+  from mrtaskman_api_not import http_file_upload
 
 
-FLAGS = gflags.FLAGS
-gflags.DEFINE_string('mrtaskman_address', 'http://mrtaskman.appspot.com',
-                     'URL of MrTaskman server to connect to.')
+# Define portable MakeHttpRequest adapter.
+try:
+  from google.appengine.api import urlfetch
+  def MakeHttpRequest(url, method='GET', headers={}, body=None):
+    """Makes HTTP request and returns read response.
+
+    Raises urllib2.HTTPError on non-200 response.
+    """
+    response = urlfetch.fetch(url, payload=body, method=method, headers=headers)
+    response_body = response.content
+    status_code = response.status_code
+    headers = response.headers
+    if 200 != status_code:
+      class Readable:
+        def __init__(self, data):
+          self.data = data
+
+        def read(self):
+          return self.data
+
+      raise urllib2.HTTPError(url, status_code, 'An HTTPError occurred.',
+                              headers, Readable(response_body))
+    else:
+      return response_body
+except ImportError:
+  def MakeHttpRequest(url, method='GET', headers={}, body=None):
+    """Makes HTTP request and returns read response.
+
+    Raises urllib2.HTTPError on non-200 response.
+    """
+    request = urllib2.Request(url, body, headers)
+    request.get_method = lambda: method
+
+    response = urllib2.urlopen(request)
+    response_body = response.read()
+    return response_body
 
 
 class MrTaskmanApi(object):
@@ -52,10 +99,9 @@ class MrTaskmanApi(object):
     url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
-    request = urllib2.Request(url, body, headers)
 
-    response = urllib2.urlopen(request)
-    response_body = response.read()
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
@@ -79,11 +125,8 @@ class MrTaskmanApi(object):
     body = json.dumps(config, indent=2).encode('utf-8')
     headers = {'Accept': 'application/json',
                'Content-Type': 'application/json'}
-    request = urllib2.Request(url, body, headers)
-    request.get_method = lambda: 'POST'
-
-    response = urllib2.urlopen(request)
-    response_body = response.read()
+    response_body = MakeHttpRequest(
+        url, method='POST', headers=headers, body=body)
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
@@ -105,11 +148,8 @@ class MrTaskmanApi(object):
     url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
-    request = urllib2.Request(url, body, headers)
-    request.get_method = lambda: 'DELETE'
-
-    response = urllib2.urlopen(request)
-    response.read()
+    response_body = MakeHttpRequest(
+        url, method='DELETE', headers=headers, body=body)
     return
 
   def AssignTask(self, worker, hostname, capabilities):
@@ -156,11 +196,8 @@ class MrTaskmanApi(object):
     body = json.dumps(assign_request, indent=2).encode('utf-8')
     headers = {'Accept': 'application/json',
                'Content-Type': 'application/json'}
-    request = urllib2.Request(url, body, headers)
-    request.get_method = lambda: 'PUT'
-
-    response = urllib2.urlopen(request)
-    response_body = response.read()
+    response_body = MakeHttpRequest(
+        url, method='PUT', headers=headers, body=body)
     if not response_body:
       return None
     response_body = response_body.decode('utf-8')
@@ -181,8 +218,8 @@ class MrTaskmanApi(object):
     Raises:
       urllib2.HTTPError on non-200 response.
     """
-    http_response = http_file_upload.SendMultipartHttpFormData(
-        response_url, 'POST', {},
+    (body, headers) = http_file_upload.EncodeMultipartHttpFormData(
+        {},
         [{'name': 'task_result',
           'Content-Type': 'application/json; charset=utf-8',
           'data': json.dumps(task_result, 'utf-8', indent=2)}],
@@ -193,7 +230,8 @@ class MrTaskmanApi(object):
           'filename': 'stderr',
           'data': stderr}])
 
-    response_body = http_response.read()
+    response_body = MakeHttpRequest(
+        response_url, method='POST', headers=headers, body=body)
 
   def MakeTaskUrl(self, task_id):
     """Returns the URL to the task given by task_id."""
@@ -220,9 +258,9 @@ class MrTaskmanApi(object):
     url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
-    request = urllib2.Request(url, body, headers)
-    response = urllib2.urlopen(request)
-    get_upload_url_response = response.read().decode('utf-8')
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    get_upload_url_response = response_body.decode('utf-8')
     get_upload_url_object = json.loads(get_upload_url_response, 'utf-8')
     upload_url = get_upload_url_object['upload_url']
 
@@ -237,14 +275,14 @@ class MrTaskmanApi(object):
       file_form_entries.append(file_form_entry)
 
     # Upload to that URL.
-    response = http_file_upload.SendMultipartHttpFormData(
-        upload_url, 'POST', {},
+    (body, headers) = http_file_upload.EncodeMultipartHttpFormData(
+        {},
         [{'name': 'manifest',
           'Content-Type': 'application.json; charset=utf-8',
           'data': json.dumps(create_package_request, 'utf-8', indent=2)}],
         file_form_entries)
-
-    response_body = response.read()
+    response_body = MakeHttpRequest(
+        upload_url, method='POST', headers=headers, body=body)
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
@@ -268,10 +306,8 @@ class MrTaskmanApi(object):
     url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}
-    request = urllib2.Request(url, body, headers)
-
-    response = urllib2.urlopen(request)
-    response_body = response.read()
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
@@ -295,9 +331,6 @@ class MrTaskmanApi(object):
     url = FLAGS.mrtaskman_address + path
     body = None
     headers = {}
-    request = urllib2.Request(url, body, headers)
-    request.get_method = lambda: 'DELETE'
-
-    response = urllib2.urlopen(request)
-    response.read()
+    response_body = MakeHttpRequest(
+        url, method='DELETE', headers=headers, body=body)
     return
