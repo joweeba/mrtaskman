@@ -119,20 +119,24 @@ def DeletePackageByNameAndVersion(name, version):
   def tx():
     package_key = MakePackageKey(name, version)
     package_keys = [package_key]
-    blob_keys = []
     package_files = (
         PackageFile.all()
                    .ancestor(package_key)
                    .fetch(limit=1000))
+    blob_keys = []
     for package_file in package_files:
       try:
-        blob_keys.extend(package_file.blob.key())
+        package_keys.append(package_file.key())
+        blob_keys.append(package_file.blob.key())
+        logging.info('Deleting %s', package_file.destination)
       except:
         continue
 
     # TODO(jeff.carollo): Make sure this doesn't sometimes leak.
-    blobstore.delete_async(blob_keys)
+    if blob_keys:
+      logging.info('Deleting %d files from %d package files.',
+                   len(blob_keys), len(package_files))
+      blobstore.delete_async(blob_keys)
 
-    package_keys.extend(package_files)
     db.delete(package_keys)
   return db.run_in_transaction(tx)
