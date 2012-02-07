@@ -14,6 +14,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+from google.appengine.api import urlfetch
 from google.appengine.api import taskqueue
 from google.appengine.ext import db
 from google.appengine.ext.blobstore import blobstore
@@ -204,7 +205,15 @@ def UploadTaskResult(task_id, attempt, exit_code,
 
     task.result = task_result
     db.put(task)
-  db.run_in_transaction(tx)
+    return task
+  task = db.run_in_transaction(tx)
+  
+  config = json.loads(task.config)
+  try:
+    webhook = config['task']['webhook']
+    fetched = urlfetch.fetch(webhook, method='POST')
+  except:
+    pass
 
 
 def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
