@@ -28,9 +28,9 @@ import time
 import urllib2
 
 import gflags
-import package_installer
 from client import mrtaskman_api
 from common import http_file_upload
+from common import package_installer
 from common import parsetime
 
 
