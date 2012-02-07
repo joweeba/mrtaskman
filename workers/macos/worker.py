@@ -29,8 +29,8 @@ import urllib2
 
 import gflags
 from client import mrtaskman_api
+from client import package_installer
 from common import http_file_upload
-from common import package_installer
 from common import parsetime
 
 
