@@ -20,6 +20,7 @@ import httplib
 import json
 import logging
 import os
+import socket
 import StringIO
 import subprocess
 import sys
@@ -34,15 +35,20 @@ from common import parsetime
 
 
 FLAGS = gflags.FLAGS
+gflags.DEFINE_string('worker_name', 'abc', 'Unique worker name.')
+
+
+def GetHostname():
+  return socket.gethostname()
 
 
 class MacOsWorker(object):
   """Executes macos tasks."""
 
-  def __init__(self):
+  def __init__(self, worker_name):
     self.api_ = mrtaskman_api.MrTaskmanApi()
-    self.worker_name_ = 'MacOsWorker1of1'
-    self.hostname_ = 'leonardo'
+    self.worker_name_ = worker_name
+    self.hostname_ = GetHostname()
     self.capabilities_ = {'executor': ['macos']}
     self.executors_ = {'macos': self.ExecuteTask}
 
@@ -213,15 +219,15 @@ def main(argv):
   try:
     argv = FLAGS(argv)
   except gflags.FlagsError, e:
-    sys.stderr.write(Usage())
     sys.stderr.write('%s\n' % e)
     sys.exit(1)
+    return
 
   try:
     FORMAT = '%(asctime)-15s %(message)s'
     logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
-    macos_worker = MacOsWorker()
+    macos_worker = MacOsWorker(FLAGS.worker_name)
     # Run forever, executing tasks from the server when available.
     macos_worker.PollAndExecute()
   finally:
