@@ -29,10 +29,21 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 class TaskResultFileDownloadHandler(
     blobstore_handlers.BlobstoreDownloadHandler):
   def get(self, file_key):
-    if not blobstore.get(file_key):
+    blob = blobstore.get(file_key)
+    if not blob:
       self.error(404)
     else:
-      self.send_blob(file_key)
+      # TODO(jeff.carollo): Actually keep track of mimetypes.
+      # TODO(jeff.carollo): Paginate output.
+      if 'text' in self.request.headers['Accept']:
+        self.response.headers['Content-Type'] = 'text/plain'
+        data = blobstore.fetch_data(file_key, 0,
+                                    blobstore.MAX_BLOB_FETCH_SIZE-1)
+        self.response.out.write(data)
+        if len(data) >= blobstore.MAX_BLOB_FETCH_SIZE-1:
+          self.response.out.write('\n----RESULT-TRUNCATED----\n')
+      else:
+        self.send_blob(file_key)
 
 
 application = webapp.WSGIApplication([
