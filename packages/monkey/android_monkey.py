@@ -11,6 +11,28 @@ import sys
 import time
 
 
+def GetDeviceSerialNumber():
+  """Returns the serial number of the device assigned to the current worker.
+
+  Pulls from environment variables.
+
+  Returns:
+    Serial number as str, or None.
+  """
+  try:
+    return os.environ['ANDROID_DEVICE_SN']
+  except:
+    return None
+
+
+# Set ADB_COMMAND.
+DEVICE_SN = GetDeviceSerialNumber()
+if not DEVICE_SN:
+  ADB_COMMAND = 'adb '
+else:
+  ADB_COMMAND = 'adb -s %s ' % DEVICE_SN
+
+
 def RunShellCommand(command):
   try:
     subprocess.check_call(command,
@@ -63,7 +85,7 @@ def CheckAdbSuccess(adb_output):
   raise subprocess.CalledProcessError(-1, 'adb', output=adb_output)
 
 
-MONKEY_COMMAND = 'adb shell /system/bin/monkey -p %s --kill-process-after-error -v 1000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
+MONKEY_COMMAND = ADB_COMMAND + 'shell /system/bin/monkey -p %s --kill-process-after-error -v 1000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
 
 
 def main(argv):
@@ -84,8 +106,9 @@ def main(argv):
 
     logging.info('Installing .apk...')
     try:
-      output = subprocess.check_output('adb install -r %s' % apk_file_path,
-                                       shell=True)
+      output = subprocess.check_output(
+          ADB_COMMAND + 'install -r %s' % apk_file_path,
+          shell=True)
       CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb install error %d:\n%s', e.returncode, e.output)
@@ -104,8 +127,9 @@ def main(argv):
     finally:
       logging.info('Uninstalling .apk...')
       try:
-        output = subprocess.check_output('adb uninstall %s' % class_path,
-                                         shell=True)
+        output = subprocess.check_output(
+            ADB_COMMAND + 'uninstall %s' % class_path,
+            shell=True)
         CheckAdbSuccess(output)
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)

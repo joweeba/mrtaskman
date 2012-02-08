@@ -35,7 +35,7 @@ from common import parsetime
 
 
 FLAGS = gflags.FLAGS
-gflags.DEFINE_string('worker_name', 'abc', 'Unique worker name.')
+gflags.DEFINE_string('worker_name', '', 'Unique worker name.')
 
 
 def GetHostname():
@@ -151,7 +151,7 @@ class MacOsWorker(object):
 
       # Get any environment variables to inject.
       env = config['task'].get('env', {})
-      env = os.environ.update(env)
+      env = env.update(os.environ)
 
       # Get our command and execute it.
       command = config['task']['command']

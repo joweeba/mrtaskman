@@ -35,7 +35,7 @@ class TaskResultFileDownloadHandler(
     else:
       # TODO(jeff.carollo): Actually keep track of mimetypes.
       # TODO(jeff.carollo): Paginate output.
-      if 'text' in self.request.headers['Accept']:
+      if 'text' in self.request.headers.get('Accept', ''):
         self.response.headers['Content-Type'] = 'text/plain'
         data = blobstore.fetch_data(file_key, 0,
                                     blobstore.MAX_BLOB_FETCH_SIZE-1)
