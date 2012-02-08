@@ -207,7 +207,7 @@ class MrTaskmanApi(object):
     """Retrieves a URL which results for given task_id can be posted to.
 
     Args:
-      task_id: Id of task to retrieve result for as int
+      task_id: Id of task to retrieve complete URL for as int
 
     Returns:
       TaskCompleteUrl object, which has a ['task_complete_url'] field.
@@ -221,8 +221,6 @@ class MrTaskmanApi(object):
     headers = {'Accept': 'application/json'}
     response_body = MakeHttpRequest(
         url, method='GET', headers=headers, body=body)
-    if not response_body:
-      return None
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
