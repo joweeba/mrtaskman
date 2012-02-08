@@ -13,6 +13,8 @@ handlers:
 # Tasks.
 - url: /tasks/[0-9]+
   script: handlers.tasks.app
+- url: /tasks/[0-9]+/task_complete_url
+  script: handlers.tasks.app
 - url: /tasks/assign
   script: handlers.tasks.app
 - url: /tasks/schedule

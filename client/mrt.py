@@ -55,6 +55,26 @@ def Task(argv):
     return e.code
 
 
+def TaskCompleteUrl(argv):
+  try:
+    task_id = int(argv.pop(0))
+  except:
+    sys.stderr.write('task command requires an integer task_id argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    task_complete_url_obj = api.GetTaskCompleteUrl(task_id)
+    json.dump(task_complete_url_obj, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
 def Schedule(argv):
   try:
     config_filepath = argv.pop(0)
@@ -262,6 +282,7 @@ COMMANDS:
   deletetask {id}\tDelete task with given id.
   schedule {task_file}\tSchedules a new task from given task_file.
   task {id}\t\tRetrieve information on given task id.
+  task_complete_url {id}\tRetrieve URL where task results can be posted.
   tasks\t\t\tList available tasks. (Not Implemented)
   stdout {id}\t\tPrints stdout from completed task with given id.
   stderr {id}\t\tPrints stderr from completed task with given id.
@@ -278,6 +299,7 @@ COMMANDS = {
   'deletetask': DeleteTask,
   'schedule': Schedule,
   'task': Task,
+  'task_complete_url': TaskCompleteUrl,
   'tasks': CommandNotImplemented,
   'stdout': Stdout,
   'stderr': Stderr,

@@ -79,6 +79,15 @@ class MacOsWorker(object):
       logging.warning('SendResponse HTTPError code %d\n%s',
                       code, body)
 
+  def GetTaskCompleteUrl(self, task_id):
+    try:
+      return self.api_.GetTaskCompleteUrl(task_id)
+    except urllib2.HTTPError, error_response:
+      body = error_response.read()
+      code = error_response.code
+      logging.warning('GetTaskCompleteUrl HTTPError code %d\n%s',
+                      code, body)
+
   def PollAndExecute(self):
     logging.info('Polling for work...')
     while True:
@@ -97,9 +106,8 @@ class MacOsWorker(object):
       logging.info('Got a task:\n%s\n', json.dumps(task, 'utf-8', indent=2))
 
       config = task['config']
-      task_id = task['id']
+      task_id = int(task['id'])
       attempt = task['attempts']
-      task_complete_url = task['task_complete_url']
       
       # Figure out which of our executors we can use.
       executor = None
@@ -123,6 +131,12 @@ class MacOsWorker(object):
       # We've got a valid executor, so use it.
       (results, stdout, stderr) = executor(task_id, attempt, task, config)
 
+      task_complete_url = self.GetTaskCompleteUrl(task_id)
+      if task_complete_url:
+        task_complete_url = task_complete_url.get('task_complete_url', None)
+      if not task_complete_url:
+        logging.error('No task complete URL. Dropping task and continuing.')
+        continue
       self.SendResponse(task_complete_url,
                         stdout,
                         stderr,

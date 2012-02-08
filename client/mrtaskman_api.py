@@ -203,6 +203,29 @@ class MrTaskmanApi(object):
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
+  def GetTaskCompleteUrl(self, task_id):
+    """Retrieves a URL which results for given task_id can be posted to.
+
+    Args:
+      task_id: Id of task to retrieve result for as int
+
+    Returns:
+      TaskCompleteUrl object, which has a ['task_complete_url'] field.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    path = '/tasks/%d/task_complete_url' % int(task_id)
+    url = FLAGS.mrtaskman_address + path
+    body = ''
+    headers = {'Accept': 'application/json'}
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    if not response_body:
+      return None
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
+
   def SendTaskResult(self, response_url, stdout, stderr, task_result):
     """Submits the results of a task to a MrTaskman-provided response_url.
 

@@ -239,6 +239,11 @@ class TasksHandler(webapp2.RequestHandler):
     return blobs 
 
 
+def MakeTaskCompleteUrl(task_id):
+  """Returns a URL for a worker to POST to when done with given Task."""
+  return blobstore.create_upload_url('/tasks/%d' % task_id)
+
+
 class TasksAssignHandler(webapp2.RequestHandler):
   """Handles /tasks/assign, which hands off tasks to workers."""
 
@@ -292,19 +297,34 @@ class TasksAssignHandler(webapp2.RequestHandler):
 
     response = model_to_dict.ModelToDict(task)
     response['kind'] = 'mrtaskman#task'
-    response['task_complete_url'] = self.MakeTaskCompleteUrl(task)
+    task_id = int(task.key().id())
+    response['task_complete_url'] = MakeTaskCompleteUrl(task_id)
 
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
 
-  def MakeTaskCompleteUrl(self, task):
-    """Returns a URL for a worker to POST to when done with given Task."""
-    task_id = int(task.key().id())
-    return blobstore.create_upload_url('/tasks/%d' % task_id)
+
+class TaskCompleteUrlHandler(webapp2.RequestHandler):
+  """In case our task complete URL expires."""
+  def get(self, task_id):
+    try:
+      task_id = int(task_id)
+    except:
+      self.response.set_status(400)
+      self.response.out.write('task_id must be an integer.')
+      return
+
+    response = {}
+    response['kind'] = 'mrtaskman#task_complete_url'
+    response['task_complete_url'] = MakeTaskCompleteUrl(task_id)
+
+    json.dump(response, self.response.out, indent=2)
+    self.response.out.write('\n')
 
 
 app = webapp2.WSGIApplication([
     ('/tasks/([0-9]+)', TasksHandler),
+    ('/tasks/([0-9]+)/task_complete_url', TaskCompleteUrlHandler),
     ('/tasks/assign', TasksAssignHandler),
     ('/tasks/schedule', TasksScheduleHandler),
     ], debug=True)
