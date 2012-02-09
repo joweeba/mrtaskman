@@ -181,10 +181,14 @@ class TasksHandler(webapp2.RequestHandler):
     stdout_download_url = self.MakeTaskResultFileDownloadUrl(stdout)
     stderr_download_url = self.MakeTaskResultFileDownloadUrl(stderr)
 
+    # Get optional device_serial_number.
+    device_serial_number = task_result.get('device_serial_number', None)
+
     try:
       tasks.UploadTaskResult(task_id, attempt, exit_code,
                              execution_time, stdout, stderr,
-                             stdout_download_url, stderr_download_url)
+                             stdout_download_url, stderr_download_url,
+                             device_serial_number)
     except tasks.TaskNotFoundError:
       self.DeleteBlobs(blob_infos)
       self.response.out.write('Task %d does not exist.' % task_id)

@@ -80,7 +80,6 @@ class MrTaskmanApi(object):
   def __init__(self, mrtaskman_address=FLAGS.mrtaskman_address):
     self.mrtaskman_url = mrtaskman_address
 
-
   def GetTask(self, task_id):
     """Performs a tasks.get on given task_id.
 

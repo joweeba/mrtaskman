@@ -60,6 +60,8 @@ class TaskResult(db.Model):
   stderr = blobstore.BlobReferenceProperty(required=False)
   stdout_download_url = db.TextProperty(required=False)
   stderr_download_url = db.TextProperty(required=True)
+  # Should be populated if task execution involved a device.
+  device_serial_number = db.StringProperty(required=False)
 
 
 class Task(db.Model):
@@ -168,7 +170,8 @@ def Assign(worker, executor_capabilities):
 
 def UploadTaskResult(task_id, attempt, exit_code,
                      execution_time, stdout, stderr,
-                     stdout_download_url, stderr_download_url):
+                     stdout_download_url, stderr_download_url,
+                     device_serial_number):
   logging.info('Trying to upload result for task %d attempt %d',
                task_id, attempt)
   def tx():
@@ -200,7 +203,8 @@ def UploadTaskResult(task_id, attempt, exit_code,
                              stdout=stdout,
                              stderr=stderr,
                              stdout_download_url=stdout_download_url,
-                             stderr_download_url=stderr_download_url)
+                             stderr_download_url=stderr_download_url,
+                             device_serial_number=device_serial_number)
     task_result = db.put(task_result)
 
     task.result = task_result

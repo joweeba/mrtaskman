@@ -30,12 +30,15 @@ import urllib2
 import gflags
 from client import mrtaskman_api
 from client import package_installer
+from common import device_info
 from common import http_file_upload
 from common import parsetime
 
 
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('worker_name', '', 'Unique worker name.')
+gflags.DEFINE_list('worker_capabilities', ['macos', 'android'],
+                   'Things this worker can do.')
 
 
 def GetHostname():
@@ -49,8 +52,13 @@ class MacOsWorker(object):
     self.api_ = mrtaskman_api.MrTaskmanApi()
     self.worker_name_ = worker_name
     self.hostname_ = GetHostname()
-    self.capabilities_ = {'executor': ['macos']}
+    self.capabilities_ = {'executor': self.GetCapabilities()}
     self.executors_ = {'macos': self.ExecuteTask}
+
+  def GetCapabilities(self):
+    capabilities = device_info.GetCapabilities()
+    capabilities.append('macos')
+    return capabilities
 
   def AssignTask(self):
     """Makes a request to /tasks/assign to get assigned a task.
@@ -69,6 +77,10 @@ class MacOsWorker(object):
 
   def SendResponse(self, response_url, stdout, stderr, task_result):
     try:
+      # TODO(jeff.carollo): Refactor.
+      device_sn = device_info.GetDeviceSerialNumber()
+      task_result['device_serial_number'] = device_sn
+       
       self.api_.SendTaskResult(response_url, stdout, stderr, task_result)
       task_id = task_result['task_id']
       logging.info('Successfully sent response for task %s: %s',
