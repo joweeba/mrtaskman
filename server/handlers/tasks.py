@@ -71,6 +71,8 @@ class TasksScheduleHandler(webapp2.RequestHandler):
       executor_requirements = parsed_config['task']['requirements']['executor']
       assert executor_requirements
       assert isinstance(executor_requirements, list)
+      for executor_req in executor_requirements:
+        assert isinstance(executor_req, basestring)
     except KeyError, e:
       self.response.out.write('Failure parsing config.\n')
       self.response.out.write('task.requirements.executor is required\n')
@@ -171,6 +173,17 @@ class TasksHandler(webapp2.RequestHandler):
           'task_result must contain integers "attempt" and "exit_code".')
       self.response.set_status(400)
       return
+
+    result_metadata = task_result.get('result_metadata', None)
+    if result_metadata:
+      try:
+        result_metadata = json.dumps(result_metadata, indent=2)
+      except:
+        self.DeleteBlobs(blob_infos)
+        self.response.out.write(
+            'result_metadata must be JSON serializable.')
+        self.response.set_status(400)
+        return
     
     # Get optional execution_time.
     execution_time = task_result.get('execution_time', None)
@@ -188,7 +201,7 @@ class TasksHandler(webapp2.RequestHandler):
       tasks.UploadTaskResult(task_id, attempt, exit_code,
                              execution_time, stdout, stderr,
                              stdout_download_url, stderr_download_url,
-                             device_serial_number)
+                             device_serial_number, result_metadata)
     except tasks.TaskNotFoundError:
       self.DeleteBlobs(blob_infos)
       self.response.out.write('Task %d does not exist.' % task_id)

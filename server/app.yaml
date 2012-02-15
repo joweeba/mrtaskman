@@ -2,7 +2,7 @@ application: mrtaskman
 version: 1
 runtime: python27
 api_version: 1
-threadsafe: false
+threadsafe: true
 
 builtins:
 - appstats: on
@@ -22,7 +22,7 @@ handlers:
 - url: /tasks/timeout
   script: models.tasks.app
 - url: /taskresultfiles/.+
-  script: handlers/taskresultfiles.py
+  script: handlers.taskresultfiles.app
 
 # Packages.
 - url: /packages/create
@@ -30,5 +30,5 @@ handlers:
 - url: /packages/[a-zA-Z]+\.[0-9.]+
   script: handlers.packages.app
 - url: /packagefiles/.+
-  script: handlers/packagefiles.py
+  script: handlers.packagefiles.app
 

@@ -53,7 +53,9 @@ class MacOsWorker(object):
     self.worker_name_ = worker_name
     self.hostname_ = GetHostname()
     self.capabilities_ = {'executor': self.GetCapabilities()}
-    self.executors_ = {'macos': self.ExecuteTask}
+    self.executors_ = {}
+    for capability in self.capabilities_['executor']:
+      self.executors_[capability] = self.ExecuteTask
 
   def GetCapabilities(self):
     capabilities = device_info.GetCapabilities()
@@ -74,22 +76,34 @@ class MacOsWorker(object):
       logging.info('Got %d HTTP response from MrTaskman on AssignTask.',
                    e.code)
       return None
+    except urllib2.URLError, e:
+      logging.info('Got URLError trying to reach MrTaskman: %s', e)
+      return None
 
   def SendResponse(self, response_url, stdout, stderr, task_result):
-    try:
-      # TODO(jeff.carollo): Refactor.
-      device_sn = device_info.GetDeviceSerialNumber()
-      task_result['device_serial_number'] = device_sn
-       
-      self.api_.SendTaskResult(response_url, stdout, stderr, task_result)
-      task_id = task_result['task_id']
-      logging.info('Successfully sent response for task %s: %s',
-                   task_id, self.api_.MakeTaskUrl(task_id))
-    except urllib2.HTTPError, error_response:
-      body = error_response.read()
-      code = error_response.code
-      logging.warning('SendResponse HTTPError code %d\n%s',
-                      code, body)
+    while True:
+      try:
+        # TODO(jeff.carollo): Refactor.
+        device_sn = device_info.GetDeviceSerialNumber()
+        task_result['device_serial_number'] = device_sn
+         
+        self.api_.SendTaskResult(response_url, stdout, stderr, task_result)
+        task_id = task_result['task_id']
+        logging.info('Successfully sent response for task %s: %s',
+                     task_id, self.api_.MakeTaskUrl(task_id))
+        return
+      except urllib2.HTTPError, error_response:
+        body = error_response.read()
+        code = error_response.code
+        logging.warning('SendResponse HTTPError code %d\n%s',
+                        code, body)
+        return
+      except urllib2.URLError, e:
+        logging.info(
+            'Got URLError trying to send response to MrTaskman: %s', e)
+        logging.info('Retrying in 10 seconds')
+        time.sleep(10)
+        continue
 
   def GetTaskCompleteUrl(self, task_id):
     try:
@@ -138,7 +152,7 @@ class MacOsWorker(object):
         # that we actually couldn't do.
         logging.error('No matching executor from %s', allowed_executors)
         raise Exception('No allowed executors matched our executors_:\n' +
-                        '%s\nvs.\n' % (allowed_executors, self.executors_))
+                        '%s\nvs.%s\n' % (allowed_executors, self.executors_))
 
       # We've got a valid executor, so use it.
       (results, stdout, stderr) = executor(task_id, attempt, task, config)
@@ -183,7 +197,7 @@ class MacOsWorker(object):
       command = config['task']['command']
 
       logging.info('Running command %s', command)
-      (exit_code, stdout, stderr, execution_time) = (
+      (exit_code, stdout, stderr, execution_time, result_metadata) = (
           self.RunCommandRedirectingStdoutAndStderrWithTimeout(
               command, env, timeout, tmpdir.GetTmpDir()))
 
@@ -194,7 +208,8 @@ class MacOsWorker(object):
         'task_id': task_id,
         'attempt': attempt,
         'exit_code': exit_code,
-        'execution_time': execution_time.total_seconds()
+        'execution_time': execution_time.total_seconds(),
+        'result_metadata': result_metadata
       }
       return (results, stdout, stderr)
     finally:
@@ -227,7 +242,12 @@ class MacOsWorker(object):
 
     stdout = file(os.path.join(cwd, 'stdout'), 'rb')
     stderr = file(os.path.join(cwd, 'stderr'), 'rb')
-    return (ret, stdout, stderr, execution_time)
+    try:
+      result_metadata_file = file(os.path.join(cwd, 'result_metadata'), 'r')
+      result_metadata = json.loads(result_metadata_file.read())
+    except:
+      result_metadata = None
+    return (ret, stdout, stderr, execution_time, result_metadata)
 
   def DownloadAndStageFiles(self, files):
     logging.info('Not staging files: %s', files)

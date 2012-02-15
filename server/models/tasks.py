@@ -62,6 +62,7 @@ class TaskResult(db.Model):
   stderr_download_url = db.TextProperty(required=True)
   # Should be populated if task execution involved a device.
   device_serial_number = db.StringProperty(required=False)
+  result_metadata = db.TextProperty(required=False)
 
 
 class Task(db.Model):
@@ -144,34 +145,38 @@ def Assign(worker, executor_capabilities):
   assert executor_capabilities
 
   logging.info('Trying to assign task for %s', executor_capabilities)
-  def tx():
-    for executor_capability in executor_capabilities:
-      task = (Task.all()
-                  .ancestor(MakeParentKey())
-                  .filter('state =', TaskStates.SCHEDULED)
-                  .filter('executor_requirements =', executor_capability)
-                  .get())
-      if task is not None:
-        task.state = TaskStates.ASSIGNED
-        task.assigned_time = datetime.datetime.now()
-        task.assigned_worker = worker
-        task.attempts += 1
-        logging.info('Assigning task %s to %s for %s.',
-                     task.key().id_or_name(),
-                     worker,
-                     executor_capability)
-        db.put(task)
-        logging.info('Assignment successful.')
-        ScheduleTaskTimeout(task)
-        return task
+  def tx(executor_capability):
+    task = (Task.all()
+                .ancestor(MakeParentKey())
+                .filter('state =', TaskStates.SCHEDULED)
+                .filter('executor_requirements =', executor_capability)
+                .get())
+    if task is not None:
+      task.state = TaskStates.ASSIGNED
+      task.assigned_time = datetime.datetime.now()
+      task.assigned_worker = worker
+      task.attempts += 1
+      logging.info('Assigning task %s to %s for %s.',
+                   task.key().id_or_name(),
+                   worker,
+                   executor_capability)
+      db.put(task)
+      logging.info('Assignment successful.')
+      ScheduleTaskTimeout(task)
+      return task
     return None
-  return db.run_in_transaction(tx)
+
+  for executor_capability in executor_capabilities:
+    task = db.run_in_transaction(tx, executor_capability)
+    if task:
+      return task
+  return None
 
 
 def UploadTaskResult(task_id, attempt, exit_code,
                      execution_time, stdout, stderr,
                      stdout_download_url, stderr_download_url,
-                     device_serial_number):
+                     device_serial_number, result_metadata):
   logging.info('Trying to upload result for task %d attempt %d',
                task_id, attempt)
   def tx():
@@ -204,7 +209,8 @@ def UploadTaskResult(task_id, attempt, exit_code,
                              stderr=stderr,
                              stdout_download_url=stdout_download_url,
                              stderr_download_url=stderr_download_url,
-                             device_serial_number=device_serial_number)
+                             device_serial_number=device_serial_number,
+                             result_metadata=result_metadata)
     task_result = db.put(task_result)
 
     task.result = task_result

@@ -4,6 +4,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import json
 import logging
 import os
 import subprocess
@@ -19,10 +20,7 @@ def GetDeviceSerialNumber():
   Returns:
     Serial number as str, or None.
   """
-  try:
-    return os.environ['ANDROID_DEVICE_SN']
-  except:
-    return None
+  return os.environ.get('DEVICE_SN', None)
 
 
 # Set ADB_COMMAND.
@@ -44,7 +42,11 @@ def RunShellCommand(command):
     sys.exit(e.returncode)
 
 
-def ReadAndroidManifest(android_manifest_path):
+def ReadAndroidManifest(apk_file_path):
+  APK_UNPACKED_DIR = '__apk_unpacked__'
+  RunShellCommand('unzip %s -d %s' % (apk_file_path, APK_UNPACKED_DIR))
+  android_manifest_path = os.path.join(APK_UNPACKED_DIR, 'AndroidManifest.xml')
+
   try:
     output = subprocess.check_output(
         'java -jar AXMLPrinter2.jar %s' % android_manifest_path,
@@ -55,12 +57,7 @@ def ReadAndroidManifest(android_manifest_path):
     sys.exit(e.returncode)
 
 
-def FindClassPath(apk_file_path):
-  APK_UNPACKED_DIR = '__apk_unpacked__'
-  RunShellCommand('unzip %s -d %s' % (apk_file_path, APK_UNPACKED_DIR))
-  manifest_path = os.path.join(APK_UNPACKED_DIR, 'AndroidManifest.xml')
-  manifest = ReadAndroidManifest(manifest_path)
-
+def FindClassPath(manifest):
   package_begin = manifest.find('package')
   if package_begin < 0:
     logging.fatal('No package begin.')
@@ -77,6 +74,34 @@ def FindClassPath(apk_file_path):
   return manifest[open_quote:close_quote]
 
 
+def GetElementValue(manifest, element_name):
+  """Does some bad XML parsing."""
+  begin = manifest.find(element_name)
+  begin = manifest.find('"', begin)
+  begin += 1
+  end = manifest.find('"', begin)
+  return manifest[begin:end]
+
+
+def WriteResultMetadata(manifest):
+  '''
+  version_code = GetElementValue(manifest, 'android:versionCode')
+  version_name = GetElementValue(manifest, 'android:versionName')
+  package = GetElementValue(manifest, 'package')
+  result_metadata = {
+      'version_code': version_code,
+      'version_name': version_name,
+      'package': package
+  }
+  '''
+  result_metadata = {
+    'AndroidManifest.xml': manifest
+  }
+  outfile = file('result_metadata', 'w')
+  json.dump(result_metadata, outfile)
+  outfile.close()
+
+
 def CheckAdbSuccess(adb_output):
   """Cover the fail."""
   if 'Success' in adb_output:
@@ -85,7 +110,7 @@ def CheckAdbSuccess(adb_output):
   raise subprocess.CalledProcessError(-1, 'adb', output=adb_output)
 
 
-MONKEY_COMMAND = ADB_COMMAND + 'shell /system/bin/monkey -p %s --kill-process-after-error -v 1000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
+MONKEY_COMMAND = ADB_COMMAND + 'shell /system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
 
 
 def main(argv):
@@ -101,7 +126,9 @@ def main(argv):
   logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
   try:
-    class_path = FindClassPath(apk_file_path)
+    manifest = ReadAndroidManifest(apk_file_path)
+    class_path = FindClassPath(manifest)
+    WriteResultMetadata(manifest)
     logging.info('Found class_path: %s', class_path)
 
     logging.info('Installing .apk...')

@@ -25,6 +25,8 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.ext.webapp.util import run_wsgi_app
 
+import webapp2
+
 
 class PackageFileDownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
   def get(self, file_key):
@@ -34,14 +36,6 @@ class PackageFileDownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
       self.send_blob(file_key)
 
 
-application = webapp.WSGIApplication([
+app = webapp2.WSGIApplication([
     ('/packagefiles/(.+)', PackageFileDownloadHandler),
     ], debug=True)
-
-
-def main():
-  run_wsgi_app(application)
-
-
-if __name__ == '__main__':
-  main()

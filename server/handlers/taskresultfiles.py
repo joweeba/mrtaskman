@@ -25,6 +25,8 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.ext.webapp.util import run_wsgi_app
 
+import webapp2
+
 
 class TaskResultFileDownloadHandler(
     blobstore_handlers.BlobstoreDownloadHandler):
@@ -46,14 +48,6 @@ class TaskResultFileDownloadHandler(
         self.send_blob(file_key)
 
 
-application = webapp.WSGIApplication([
+app = webapp2.WSGIApplication([
     ('/taskresultfiles/(.+)', TaskResultFileDownloadHandler),
     ], debug=True)
-
-
-def main():
-  run_wsgi_app(application)
-
-
-if __name__ == '__main__':
-  main()
