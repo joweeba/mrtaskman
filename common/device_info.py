@@ -26,7 +26,7 @@ DEVICE_INFO = {
         'device_name': 'Galaxy Nexus',
         'os_name': 'android',
         'os_version': '4.0.2',
-        'cell_number': '4258900342',
+        'cell_number': '4255771762',
         'provider': 'Verizon Wireless',
         'hub': '01',
         'hub_port': 'D'
@@ -51,6 +51,16 @@ DEVICE_INFO = {
         'hub': '01',
         'hub_port': 'A'
     },
+    '4342354131485A483144': {
+        'device_type': 'phone',
+        'device_name': 'Sony Ericson Xperia PLAY 4G',
+        'os_name': 'android',
+        'os_version': '2.3.3',
+        'cell_number': '7744208420',
+        'provider': 'AT&T',
+        'hub': '01',
+        'hub_port': 'E'
+    },
     '388920443A07097': {
         'device_type': 'tablet',
         'device_name': 'Samsung Galaxy Tab',
@@ -59,6 +69,24 @@ DEVICE_INFO = {
         'provider': 'Verizon Wireless',
         'hub': '01',
         'hub_port': 'C'
+    },
+    '304D191A2004639E': {
+        'device_type': 'phone',
+        'device_name': 'Samsung Galaxy S II',
+        'os_name': 'android',
+        'os_version': '2.3.4',
+        'cell_number': 'unknown',
+        'provider': 'AT&T',
+        'hub': '01',
+        'hub_port': 'F'
+    },
+    'D01EC0A020221J09': {
+        'device_type': 'tablet',
+        'device_name': 'Kindle Fire',
+        'os_name': 'android',
+        'os_version': 'unknown',
+        'hub': '01',
+        'hub_port': 'G'
     }
 }
 
