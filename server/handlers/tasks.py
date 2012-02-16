@@ -20,6 +20,7 @@ from google.appengine.ext.blobstore import blobstore
 import cgi
 import json
 import logging
+import quopri
 import urllib
 import webapp2
 
@@ -145,10 +146,10 @@ class TasksHandler(webapp2.RequestHandler):
 
     task_result = self.request.get('task_result', None)
     if task_result:
-      task_result = urllib.unquote(task_result.decode('utf-8'))
+      task_result = quopri.decodestring(task_result).decode('ISO-8859-1')
     if task_result:
       try:
-        task_result = json.loads(task_result, 'utf-8')
+        task_result = json.loads(task_result, 'ISO-8859-1')
       except ValueError, e:
         self.response.out.write('Field "task_result" must be valid JSON.\n')
         logging.info(e)
