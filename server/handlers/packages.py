@@ -113,7 +113,7 @@ class PackagesCreateHandler(webapp2.RequestHandler):
       files = self.MakeFilesListFromManifestAndBlobs(manifest, blob_infos)
     except PackagesError, e:
       self.DeleteAllBlobs(blob_infos)
-      self.response.out.write(e.message())
+      self.response.out.write(e.message)
       self.response.set_status(400)
       return
 
