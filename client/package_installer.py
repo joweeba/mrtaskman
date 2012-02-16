@@ -60,6 +60,10 @@ def DownloadAndInstallPackage(package_name, package_version, root_dir):
 
   Returns:
     None
+
+  Raises:
+    urllib2.HTTPError on packages not being available.
+    urllib2.URLError if mrtaskman is not reachable.
   """
   logging.info('DownloadAndInstallPackage %s %d %s',
                package_name, package_version, root_dir)

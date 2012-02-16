@@ -41,6 +41,14 @@ gflags.DEFINE_list('worker_capabilities', ['macos', 'android'],
                    'Things this worker can do.')
 
 
+class TaskError(Exception):
+  pass
+class MrTaskmanUnrecoverableHttpError(TaskError):
+  pass
+class MrTaskmanRecoverableHttpError(TaskError):
+  pass
+
+
 def GetHostname():
   return socket.gethostname()
 
@@ -80,15 +88,22 @@ class MacOsWorker(object):
       logging.info('Got URLError trying to reach MrTaskman: %s', e)
       return None
 
-  def SendResponse(self, response_url, stdout, stderr, task_result):
+  def SendResponse(self, task_id, stdout, stderr, task_result):
     while True:
       try:
         # TODO(jeff.carollo): Refactor.
         device_sn = device_info.GetDeviceSerialNumber()
         task_result['device_serial_number'] = device_sn
-         
+        
+        response_url = self.api_.GetTaskCompleteUrl(task_id)
+        if not response_url:
+          logging.info('No task complete url for task_id %s', task_id)
+          return
+        response_url = response_url.get('task_complete_url', None)
+        if not response_url:
+          logging.info('No task complete url for task_id %s', task_id)
+          return
         self.api_.SendTaskResult(response_url, stdout, stderr, task_result)
-        task_id = task_result['task_id']
         logging.info('Successfully sent response for task %s: %s',
                      task_id, self.api_.MakeTaskUrl(task_id))
         return
@@ -154,19 +169,18 @@ class MacOsWorker(object):
         raise Exception('No allowed executors matched our executors_:\n' +
                         '%s\nvs.%s\n' % (allowed_executors, self.executors_))
 
-      # We've got a valid executor, so use it.
-      (results, stdout, stderr) = executor(task_id, attempt, task, config)
+      try:
+        # We've got a valid executor, so use it.
+        (results, stdout, stderr) = executor(task_id, attempt, task, config)
 
-      task_complete_url = self.GetTaskCompleteUrl(task_id)
-      if task_complete_url:
-        task_complete_url = task_complete_url.get('task_complete_url', None)
-      if not task_complete_url:
-        logging.error('No task complete URL. Dropping task and continuing.')
-        continue
-      self.SendResponse(task_complete_url,
-                        stdout,
-                        stderr,
-                        results)
+        self.SendResponse(task_id,
+                          stdout,
+                          stderr,
+                          results)
+      except MrTaskmanUnrecoverableHttpError:
+        logging.error(
+            'Unrecoverable MrTaskman HTTP error. Aborting task %d.', task_id)
+
       logging.info('Polling for work...')
       # Loop back up and poll for the next task.
  
@@ -237,6 +251,7 @@ class MacOsWorker(object):
       logging.info('command %s timed out.', command)
       process.terminate()
       process.wait()
+      ret = -99
 
     execution_time = finished_time - begin_time
 
@@ -244,7 +259,7 @@ class MacOsWorker(object):
     stderr = file(os.path.join(cwd, 'stderr'), 'rb')
     try:
       result_metadata_file = file(os.path.join(cwd, 'result_metadata'), 'r')
-      result_metadata = json.loads(result_metadata_file.read())
+      result_metadata = json.loads(result_metadata_file.read().decode('utf-8'))
     except:
       result_metadata = None
     return (ret, stdout, stderr, execution_time, result_metadata)
@@ -256,9 +271,22 @@ class MacOsWorker(object):
   def DownloadAndInstallPackages(self, packages, tmpdir):
     # TODO(jeff.carollo): Create a package cache if things take off.
     for package in packages:
-      package_installer.DownloadAndInstallPackage(
-          package['name'], package['version'],
-          tmpdir.GetTmpDir())
+      while True:
+        try:
+          package_installer.DownloadAndInstallPackage(
+              package['name'], package['version'],
+              tmpdir.GetTmpDir())
+          break
+        except urllib2.HTTPError, e:
+          logging.error('Got HTTPError %d trying to grab package %s.%s: %s',
+              e.code, package['name'], package['version'], e)
+          raise MrTaskmanUnrecoverableHttpError(e)
+        except urllib2.URLError:
+          logging.error('Got URLError trying to grab package %s.%s: %s',
+              package['name'], package['version'], e)
+          logging.info('Retrying in 10')
+          time.sleep(10)
+          continue
 
 
 def main(argv):
