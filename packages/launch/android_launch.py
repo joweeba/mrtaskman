@@ -1,10 +1,9 @@
 #!/usr/bin/python
 
-"""Executes Android Monkey stress test over adb to attached Android device."""
+"""Executes Android Launch test over adb to attached Android device."""
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
-import json
 import logging
 import os
 import subprocess
@@ -13,8 +12,9 @@ import time
 
 from tasklib import apklib
 
+
 ADB_COMMAND = apklib.ADB_COMMAND
-MONKEY_COMMAND = ADB_COMMAND + 'shell /system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
+LAUNCH_COMMAND = ADB_COMMAND + 'shell am start -W -S %s/.%s'
 
 
 def main(argv):
@@ -31,8 +31,9 @@ def main(argv):
 
   try:
     manifest = apklib.ReadAndroidManifest(apk_file_path)
-    class_path = apklib.FindClassPath(manifest)
     apklib.WriteResultMetadata(manifest)
+    class_path = apklib.FindClassPath(manifest)
+    class_name = apklib.FindClassName(manifest)
     logging.info('Found class_path: %s', class_path)
 
     logging.info('Installing .apk...')
@@ -48,13 +49,13 @@ def main(argv):
     try:
       logging.info('Running command...')
       try:
-        subprocess.check_call(MONKEY_COMMAND % (class_path, ' '.join(argv)),
+        subprocess.check_call(LAUNCH_COMMAND % (class_path, class_name),
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               shell=True)
       except subprocess.CalledProcessError, e:
-        logging.error('Error %d:\n%s', e.returncode, e.output)
-        sys.exit(e.returncode)
+        logging.error('CalledProcessError %d:\n%s', e.returncode, e.output)
+        sys.exit(e.returncode) 
     finally:
       logging.info('Uninstalling .apk...')
       try:
@@ -66,7 +67,7 @@ def main(argv):
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
         sys.exit(e.returncode)
     
-    logging.info('Monkey work done successfully.')
+    logging.info('Launch work done successfully.')
     return 0
   finally:
     logging.shutdown()
