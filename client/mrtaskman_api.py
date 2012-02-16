@@ -241,7 +241,7 @@ class MrTaskmanApi(object):
     (body, headers) = http_file_upload.EncodeMultipartHttpFormData(
         {},
         [{'name': 'task_result',
-          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Type': 'application/json;charset=utf-8',
           'data': json.dumps(task_result, 'utf-8', indent=2)}],
         [{'name': 'STDOUT',
           'filename': 'stdout',

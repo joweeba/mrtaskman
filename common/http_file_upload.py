@@ -65,7 +65,7 @@ def EncodeMultipartHttpFormData(headers, form_data, file_data):
       try:
         body_parts.append(u'Content-Type: %s' % form_piece['Content-Type'])
       except:
-        body_parts.append(u'Content-Type: text/plain; charset=utf-8')
+        body_parts.append(u'Content-Type: text/plain;charset=utf-8')
       body_parts.append(u'')
       body_parts.append(form_piece['data'].encode('utf-8'))
     except KeyError:
@@ -83,7 +83,8 @@ def EncodeMultipartHttpFormData(headers, form_data, file_data):
         data = file_piece['data']
         if isinstance(data, file):
           data = data.read()
-        body_parts.append(u'Content-Type: application/octet-stream;charset=utf-8')
+        body_parts.append(
+            u'Content-Type: application/octet-stream;charset=utf-8')
       except KeyError:
         data = file(file_piece['filepath'], 'rb').read()
         body_parts.append(u'Content-Type: %s;charset=utf-8' % (
