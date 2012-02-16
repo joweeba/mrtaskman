@@ -221,7 +221,8 @@ def UploadTaskResult(task_id, attempt, exit_code,
   config = json.loads(task.config)
   try:
     webhook = config['task']['webhook']
-    fetched = urlfetch.fetch(webhook, method='POST')
+    fetched = urlfetch.fetch(webhook, method='POST',
+                             payload={'task_id': task_id})
   except:
     pass
 
