@@ -68,6 +68,7 @@ class MacOsWorker(object):
   def GetCapabilities(self):
     capabilities = device_info.GetCapabilities()
     capabilities.append('macos')
+    capabilities.append(self.worker_name_)
     return capabilities
 
   def AssignTask(self):
@@ -110,6 +111,9 @@ class MacOsWorker(object):
       except urllib2.HTTPError, error_response:
         body = error_response.read()
         code = error_response.code
+        if code == 404:
+          logging.warning('TaskCompleteUrl timed out.')
+          continue
         logging.warning('SendResponse HTTPError code %d\n%s',
                         code, body)
         return
@@ -287,6 +291,10 @@ class MacOsWorker(object):
           logging.info('Retrying in 10')
           time.sleep(10)
           continue
+        except IOError, e:
+          logging.error('Got IOError trying to grab package %s.%s: %s',
+              package['name'], package['version'], e)
+          raise MrTaskmanUnrecoverableHttpError(e)
 
 
 def main(argv):

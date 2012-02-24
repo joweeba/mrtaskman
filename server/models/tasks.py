@@ -22,6 +22,7 @@ from google.appengine.ext.blobstore import blobstore
 import datetime
 import json
 import logging
+import urllib
 import webapp2
 
 from util import db_properties
@@ -218,13 +219,20 @@ def UploadTaskResult(task_id, attempt, exit_code,
     return task
   task = db.run_in_transaction(tx)
   
+  logging.info('Insert succeeded.')
   config = json.loads(task.config)
   try:
     webhook = config['task']['webhook']
-    fetched = urlfetch.fetch(webhook, method='POST',
-                             payload={'task_id': task_id})
-  except:
-    pass
+    logging.info('invoking webhook: %s', webhook)
+    payload = urllib.urlencode({'task_id': task_id}).encode('utf-8')
+    fetched = urlfetch.fetch(url=webhook, method='POST', payload=payload,
+        headers={'Content-Type':
+            'application/x-www-form-urlencoded;encoding=utf-8'})
+    logging.info('Webhook invoked with status %d: %s.', fetched.status_code,
+        fetched.content)
+  except Exception, e:
+    logging.exception(e)
+    logging.info('No webhook, or error invoking webhook.')
 
 
 def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
