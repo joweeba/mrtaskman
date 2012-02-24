@@ -21,6 +21,46 @@ import os
 
 
 DEVICE_INFO = {
+    '''
+    # Jeff's Phone.
+    '35326BF6F6C300EC': {
+        'device_type': 'phone',
+        'device_name': 'Google Nexus S',
+        'os_name': 'android',
+        'os_version': '4.0.2',
+        'cell_number': '9795741534',
+        'provider': 'T-Mobile',
+        'hub': 'leonardo',
+        'hub_port': '*'
+    },
+    '''
+    '328C000600000001': {
+        'device_type': 'tablet',
+        'device_name': 'Amazon Kindle Fire',
+        'os_name': 'android',
+        'os_version': '2.3',
+        'hub': '01',
+        'hub_port': 'G'
+    },
+    '902a6d03': {
+        'device_type': 'tablet',
+        'device_name': 'Samsung Galaxy Tab 8.9',
+        'os_name': 'android',
+        'os_version': '3.2',
+        'provider': 'AT&T',
+        'hub': '02',
+        'hub_port': 'B'
+    },
+    'LGOTMSae4105e': {
+        'device_type': 'phone',
+        'device_name': 'LG Nitro HD',
+        'os_name': 'android',
+        'os_version': '2.3.5',
+        'cell_number': '7744208329',
+        'provider': 'AT&T',
+        'hub': '02',
+        'hub_port': 'A'
+    },
     '0146A14C1001800C': {
         'device_type': 'phone',
         'device_name': 'Galaxy Nexus',
@@ -79,14 +119,6 @@ DEVICE_INFO = {
         'provider': 'AT&T',
         'hub': '01',
         'hub_port': 'F'
-    },
-    'D01EC0A020221J09': {
-        'device_type': 'tablet',
-        'device_name': 'Kindle Fire',
-        'os_name': 'android',
-        'os_version': 'unknown',
-        'hub': '01',
-        'hub_port': 'G'
     }
 }
 
