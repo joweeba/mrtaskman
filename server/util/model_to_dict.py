@@ -5,6 +5,7 @@ from google.appengine.ext.blobstore import blobstore
 
 import datetime
 import json
+import logging
 import time
 
 from util import db_properties
@@ -15,6 +16,9 @@ SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 
 def ModelToDict(model):
   """Returns dictionary from given db.Model."""
+  if not isinstance(model, db.Model):
+    logging.error('%s is not an instance of db.Model. It is %s',
+                  model, model.__class__)
   assert isinstance(model, db.Model)
   output = {}
   output['id'] = model.key().id_or_name()

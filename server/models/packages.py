@@ -17,11 +17,7 @@ __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 from google.appengine.ext import db
 from google.appengine.ext.blobstore import blobstore
 
-import datetime
 import logging
-import webapp2
-
-from util import db_properties
 
 
 class Error(Exception):
