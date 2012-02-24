@@ -26,7 +26,7 @@ from util import model_to_dict
 class EventsError(Exception):
   def __init__(self, message):
     Exception.__init__(self, message)
-  
+
 
 class EventsHandler(webapp2.RequestHandler):
   """Handles requests for Events."""
@@ -173,7 +173,7 @@ class EventsHandler(webapp2.RequestHandler):
       self.response.out.write('event_id must be numeric')
       self.response.set_status(400)
       return
-      
+
     deleted = events.DeleteEventById(event_id)
     if not deleted:
       self.response.set_status(404)
