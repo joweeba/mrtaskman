@@ -354,3 +354,94 @@ class MrTaskmanApi(object):
     response_body = MakeHttpRequest(
         url, method='DELETE', headers=headers, body=body)
     return
+
+  def GetEvent(self, event_id):
+    """Performs an events.get for given event_id.
+
+    Args:
+      event_id: Id of event as int.
+
+    Returns:
+      mrtaskman#event object
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(event_id, int)
+
+    path = '/events/%d' % event_id
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {'Accept': 'application/json'}
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
+
+  def DeleteEvent(self, event_id):
+    """Performs an events.delete on given event_id.
+
+    Args:
+      event_id: Id of event as int.
+
+    Returns:
+      None
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(event_id, int)
+
+    path = '/events/%d' % event_id
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {}
+    response_body = MakeHttpRequest(
+        url, method='DELETE', headers=headers, body=body)
+    return
+
+  def CreateEvent(self, event):
+    """Performs an events.create on given Event object.
+
+    Args:
+      config: Event object to create.
+
+    Returns:
+      Event object.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert event
+    # TODO(jeff.carollo): Validate event.
+
+    path = '/events'
+    url = FLAGS.mrtaskman_address + path
+    body = json.dumps(event, indent=2).encode('utf-8')
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json'}
+    response_body = MakeHttpRequest(
+        url, method='POST', headers=headers, body=body)
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
+
+  def ListEvents(self):
+    """Performs an events.list.
+
+    Args:
+      None
+
+    Returns:
+      List of Event objects.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    path = '/events/all'
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {'Accept': 'application/json'}
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')

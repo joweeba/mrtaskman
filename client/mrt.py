@@ -263,6 +263,93 @@ def GetResultFile(command_name, argv):
     return e.code
 
 
+def Event(argv):
+  try:
+    event_id = int(argv.pop(0))
+  except:
+    sys.stderr.write(
+        'event command requires an int event id argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    event = api.GetEvent(event_id)
+    json.dump(event, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
+def Events(argv):
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    events = api.ListEvents()
+    json.dump(events, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
+def CreateEvent(argv):
+  try:
+    event_filepath = argv.pop(0)
+  except:
+    sys.stderr.write('createevent command requires a filepath argument.\n')
+    return 3
+
+  try:
+    event_file = file(event_filepath, 'r')
+  except Exception, e:
+    sys.stderr.write('Error opening %s:\n%s\n' % (event_filepath, e))
+    return 4
+
+  try:
+    event = json.load(event_file)
+  except Exception, e:
+    sys.stderr.write('Error reading or parsing event file:\n%s\n' % e)
+    return 5
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    event_result = api.CreateEvent(event)
+    json.dump(event_result, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
+def DeleteEvent(argv):
+  try:
+    event_id = int(argv.pop(0))
+  except:
+    sys.stderr.write(
+        'deleteevent command requires an int event id argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    api.DeleteEvent(event_id)
+    print 'Successfully deleted event %s' % event_id
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
 def CommandNotImplemented(argv):
   """Dummy command which explains that a command is not yet implemented."""
   sys.stderr.write('This command is not yet implemented.\n')
@@ -290,7 +377,12 @@ COMMANDS:
   createpackage {manifest}\t Create a new package with given manifest.
   deletepackage {name} {version} Delete package with given name and version.
   package {name} {version}\t Retrieve information on given package.
-  packages\t\t\t List existing packages. (Not Implemented)""")
+  packages\t\t\t List existing packages. (Not Implemented)
+
+  createevent {event}\tCreate an new Event with given event file.
+  deleteevent {event_id}\tDelete Event with given id.
+  event {event_id}\t\tPrint Event with given id.
+  events\t\t\tList most recent MrTaskman Events.""")
 
 
 # Mapping of command text to command function.
@@ -307,6 +399,10 @@ COMMANDS = {
   'deletepackage': DeletePackage,
   'package': Package,
   'packages': CommandNotImplemented,
+  'createevent': CreateEvent,
+  'deleteevent': DeleteEvent,
+  'event': Event,
+  'events': Events,
 }
 
 
