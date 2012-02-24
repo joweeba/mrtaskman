@@ -32,3 +32,8 @@ handlers:
 - url: /packagefiles/.+
   script: handlers.packagefiles.app
 
+# Events.
+- url: /events/[a-z0-9]+
+  script: handlers.events.app
+- url: /events
+  script: handlers.events.app
