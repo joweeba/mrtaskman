@@ -17,6 +17,7 @@ Expects that DEVICE_SN will be set in process environment.
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import logging
 import os
 
 
@@ -162,3 +163,38 @@ def GetCapabilities():
       AppendIf(capabilities, device_info.get('os_version', None))
       AppendIf(capabilities, device_info.get('provider', None))
   return capabilities
+
+
+try:
+  import subprocess
+
+
+  def AdbDevices():
+    """Returns the devices recognized by adb as a list of str."""
+
+    devices = []
+    command = ('adb devices 2>&1 | grep "device$" | '
+               'sed "s/\([a-zA-Z0-9]\)*\s*device/\1/g"')
+    try:
+      output = subprocess.check_output(command, shell=True)
+    except subprocess.CalledProcessError, e:
+      logging.error('Unable to invoke adb.')
+      logging.exception(e)
+      return devices
+      
+    lines = output.split('\n')
+    for line in lines:
+      line = line.strip()
+      index = line.find('\t\x01')
+      if index >= 0 and index < len(line):
+        line = line[0:index]
+      if line:
+        devices.append(line)
+    if not devices:
+      logging.info('No attached adb devices.')
+    return devices
+except ImportError:
+  # Allow AppEngine clients to ignore this.
+  def AdbDevices():
+    """Not defined for AppEngine."""
+    return []
