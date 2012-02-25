@@ -106,15 +106,13 @@ def MakeParentKey():
 
 def Schedule(name, config, scheduled_by, executor_requirements):
   """Adds a new Task with given name, config, user and requirements."""
-  def tx():
-    task = Task(parent=MakeParentKey(),
-                name=name,
-                config=config,
-                scheduled_by=scheduled_by,
-                executor_requirements=executor_requirements)
-    db.put(task)
-    return task
-  return db.run_in_transaction(tx)
+  task = Task(parent=MakeParentKey(),
+              name=name,
+              config=config,
+              scheduled_by=scheduled_by,
+              executor_requirements=executor_requirements)
+  db.put(task)
+  return task
 
 
 def GetById(task_id):
