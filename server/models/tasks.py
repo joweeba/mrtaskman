@@ -45,7 +45,7 @@ class TaskStates(object):
   SCHEDULED = 'scheduled'
   ASSIGNED = 'assigned'
   COMPLETE = 'complete'
-  
+
 
 class TaskOutcomes(object):
   SUCCESS = 'success'
@@ -139,7 +139,7 @@ def Assign(worker, executor_capabilities):
     worker: Name of worker as str.
     executor_capabilities: Capabilities as list of str.
 
-  Returns: 
+  Returns:
     Task if a Task was assigned, None otherwise.
   """
   assert worker
@@ -218,7 +218,7 @@ def UploadTaskResult(task_id, attempt, exit_code,
     db.put(task)
     return task
   task = db.run_in_transaction(tx)
-  
+
   logging.info('Insert succeeded.')
   config = json.loads(task.config)
   try:
@@ -237,7 +237,7 @@ def UploadTaskResult(task_id, attempt, exit_code,
 
 def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
   """Returns task timeout as timedelta.
-  
+
   Defaults to 15 minutes if no timeout is specified.
 
   A worker is given 3 minutes longer than the task timeout to allow for
@@ -253,7 +253,7 @@ def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
 
 def ScheduleTaskTimeout(task):
   """Schedules a timeout for the given assigned Task.
-  
+
   Called by Assign to enforce Task timeouts.
   """
   timeout = GetTaskTimeout(task)
@@ -268,7 +268,7 @@ def ScheduleTaskTimeout(task):
 
 class TaskTimeoutHandler(webapp2.RequestHandler):
   """Handles Task timeout firing.
-  
+
   A Task may have completed successfully before the handler fires,
   in which case a timeout did not occur and this handler will not
   modify the completed Task.
