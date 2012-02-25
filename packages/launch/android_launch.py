@@ -17,6 +17,13 @@ ADB_COMMAND = apklib.ADB_COMMAND
 LAUNCH_COMMAND = ADB_COMMAND + 'shell am start -W -S %s/.%s'
 
 
+def ExitWithErrorCode(error_code):
+  if error_code == 0:
+    logging.warning('Error code is zero, maaking it non-zero')
+    error_code = -7
+  sys.exit(error_code)
+
+
 def main(argv):
   my_name = argv.pop(0)
 
@@ -44,7 +51,7 @@ def main(argv):
       apklib.CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb install error %d:\n%s', e.returncode, e.output)
-      sys.exit(e.returncode)
+      ExitWithErrorCode(e.returncode)
 
     try:
       logging.info('Running command...')
@@ -55,7 +62,7 @@ def main(argv):
                               shell=True)
       except subprocess.CalledProcessError, e:
         logging.error('CalledProcessError %d:\n%s', e.returncode, e.output)
-        sys.exit(e.returncode) 
+        ExitWithErrorCode(e.returncode)
     finally:
       logging.info('Uninstalling .apk...')
       try:
@@ -65,7 +72,7 @@ def main(argv):
         apklib.CheckAdbSuccess(output)
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
-        sys.exit(e.returncode)
+        ExitWithErrorCode(e.returncode)
     
     logging.info('Launch work done successfully.')
     return 0

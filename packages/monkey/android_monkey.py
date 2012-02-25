@@ -17,6 +17,13 @@ ADB_COMMAND = apklib.ADB_COMMAND
 MONKEY_COMMAND = ADB_COMMAND + 'shell /system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
 
 
+def ExitWithErrorCode(error_code):
+  if error_code == 0:
+    logging.warning('Error code is zero, maaking it non-zero')
+    error_code = -7
+  sys.exit(error_code)
+
+
 def main(argv):
   my_name = argv.pop(0)
 
@@ -43,7 +50,7 @@ def main(argv):
       apklib.CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb install error %d:\n%s', e.returncode, e.output)
-      sys.exit(e.returncode)
+      ExitWithErrorCode(e.returncode)
 
     try:
       logging.info('Running command...')
@@ -54,7 +61,7 @@ def main(argv):
                               shell=True)
       except subprocess.CalledProcessError, e:
         logging.error('Error %d:\n%s', e.returncode, e.output)
-        sys.exit(e.returncode)
+        ExitWithErrorCode(e.returncode)
     finally:
       logging.info('Uninstalling .apk...')
       try:
@@ -64,7 +71,7 @@ def main(argv):
         apklib.CheckAdbSuccess(output)
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
-        sys.exit(e.returncode)
+        ExitWithErrorCode(e.returncode)
     
     logging.info('Monkey work done successfully.')
     return 0
