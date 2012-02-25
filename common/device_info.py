@@ -181,7 +181,7 @@ try:
       logging.error('Unable to invoke adb.')
       logging.exception(e)
       return devices
-      
+
     lines = output.split('\n')
     for line in lines:
       line = line.strip()
@@ -190,9 +190,11 @@ try:
         line = line[0:index]
       if line:
         devices.append(line)
-    if not devices:
-      logging.info('No attached adb devices.')
     return devices
+
+  def DeviceIsConnected(device_sn=DEVICE_SN):
+    devices = AdbDevices()
+    return device_sn in devices
 except ImportError:
   # Allow AppEngine clients to ignore this.
   def AdbDevices():

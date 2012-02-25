@@ -95,7 +95,7 @@ class MacOsWorker(object):
         # TODO(jeff.carollo): Refactor.
         device_sn = device_info.GetDeviceSerialNumber()
         task_result['device_serial_number'] = device_sn
-        
+
         response_url = self.api_.GetTaskCompleteUrl(task_id)
         if not response_url:
           logging.info('No task complete url for task_id %s', task_id)
@@ -133,27 +133,45 @@ class MacOsWorker(object):
       logging.warning('GetTaskCompleteUrl HTTPError code %d\n%s',
                       code, body)
 
+  def ShouldWaitForDevice(self):
+    """Returns True iff this worker controls a device which is offline."""
+    if not device_info.DEVICE_SN:
+      return False
+    return not device_info.DeviceIsConnected()
+
   def PollAndExecute(self):
     logging.info('Polling for work...')
+    device_active = True
     while True:
-      # TODO(jeff.carollo): Wrap this in a catch-all Excepion handler that
-      # allows us to continue executing in the face of various task errors.
-      task = self.AssignTask()
-      
-      if not task:
-        try:
+      try:
+        if self.ShouldWaitForDevice():
+          if device_active:
+            logging.info('Device %s is offline. Waiting for it to come back.',
+                         device_info.DEVICE_SN)
+            device_active = False
           time.sleep(10)
           continue
-        except KeyboardInterrupt:
-          logging.info('Caught CTRL+C. Exiting.')
-          return
+        if not device_active:
+          logging.info('Device came back online.')
+          device_active = True
+
+        # TODO(jeff.carollo): Wrap this in a catch-all Excepion handler that
+        # allows us to continue executing in the face of various task errors.
+        task = self.AssignTask()
+
+        if not task:
+          time.sleep(10)
+          continue
+      except KeyboardInterrupt:
+        logging.info('Caught CTRL+C. Exiting.')
+        return
 
       logging.info('Got a task:\n%s\n', json.dumps(task, 'utf-8', indent=2))
 
       config = task['config']
       task_id = int(task['id'])
       attempt = task['attempts']
-      
+
       # Figure out which of our executors we can use.
       executor = None
       allowed_executors = config['task']['requirements']['executor']
@@ -164,7 +182,7 @@ class MacOsWorker(object):
           pass
         if executor is not None:
           break
-      
+
       if executor is None:
         # TODO: Send error response to server.
         # This is probably our fault - we said we could do something
@@ -187,7 +205,7 @@ class MacOsWorker(object):
 
       logging.info('Polling for work...')
       # Loop back up and poll for the next task.
- 
+
   def ExecuteTask(self, task_id, attempt, task, config):
     logging.info('Recieved task %s', task_id)
 
