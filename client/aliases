@@ -1,0 +1,9 @@
+alias devices='adb devices | grep '\''device'\'' | grep -v '\''devices'\'' | sed '\''s/\([a-zA-Z0-9]*\).*device.*/\1/g'\'' | sort'
+alias workers='ps aux | grep '\''worker.py --worker_name'\'' | sed '\''s/.*--worker_name=\(.*\)/\1/'\'' | grep -v grep | sort'
+alias missingdevices='echo "`devices`
+`workers`" | sort | uniq -u'
+alias downdevices='echo "`missingdevices`
+`workers`" | sort | uniq -d'
+alias downworkers='echo "`missingdevices`
+`devices`" | sort | uniq -d'
+alias downdevicelogs='for device in `downdevices`; do echo "`alias`" | grep "$device"; done | sed "s/.*\(worker[0-9]*.log\).*/\1/"'
