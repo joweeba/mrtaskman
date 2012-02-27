@@ -39,12 +39,13 @@ except ImportError:
 # Define portable MakeHttpRequest adapter.
 try:
   from google.appengine.api import urlfetch
-  def MakeHttpRequest(url, method='GET', headers={}, body=None):
+  def MakeHttpRequest(url, method='GET', headers={}, body=None, timeout=55):
     """Makes HTTP request and returns read response.
 
     Raises urllib2.HTTPError on non-200 response.
     """
-    response = urlfetch.fetch(url, payload=body, method=method, headers=headers)
+    response = urlfetch.fetch(url, payload=body, method=method, headers=headers,
+                              deadline=timeout)
     response_body = response.content
     status_code = response.status_code
     headers = response.headers
@@ -61,7 +62,7 @@ try:
     else:
       return response_body
 except ImportError:
-  def MakeHttpRequest(url, method='GET', headers={}, body=None):
+  def MakeHttpRequest(url, method='GET', headers={}, body=None, timeout=15*60):
     """Makes HTTP request and returns read response.
 
     Raises urllib2.HTTPError on non-200 response.
@@ -69,7 +70,7 @@ except ImportError:
     request = urllib2.Request(url, body, headers)
     request.get_method = lambda: method
 
-    response = urllib2.urlopen(request)
+    response = urllib2.urlopen(request, timeout=timeout)
     response_body = response.read()
     return response_body
 
