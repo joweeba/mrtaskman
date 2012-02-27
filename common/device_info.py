@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,8 +18,10 @@ Expects that DEVICE_SN will be set in process environment.
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import json
 import logging
 import os
+import sys
 
 
 DEVICE_INFO = {
@@ -35,6 +38,24 @@ DEVICE_INFO = {
         'hub_port': '*'
     },
     '''
+    'SH0CJLV00997': {
+        'device_type': 'phone',
+        'device_name': 'T-Mobile MyTouch 3G',
+        'os_name': 'android',
+        'os_version': '1.6',
+        'provider': 'T-Mobile',
+        'hub': '02',
+        'hub_port': 'D'
+    },
+    '3233A90D16A800EC': {
+        'device_type': 'phone',
+        'device_name': 'Google Nexus S',
+        'os_name': 'android',
+        'os_version': '2.3.6',
+        'provider': 'T-Mobile',
+        'hub': '02',
+        'hub_port': 'C'
+    },
     '328C000600000001': {
         'device_type': 'tablet',
         'device_name': 'Amazon Kindle Fire',
@@ -123,7 +144,6 @@ DEVICE_INFO = {
     }
 }
 
-
 # Shouldn't change for the life of this process.
 DEVICE_SN = os.environ.get('DEVICE_SN', None)
 
@@ -200,3 +220,15 @@ except ImportError:
   def AdbDevices():
     """Not defined for AppEngine."""
     return []
+
+
+def main(argv):
+  device_ids = sys.stdin.read().split('\n')
+  for device_id in device_ids:
+    if device_id:
+      print '"%s": %s' % (device_id,
+                          json.dumps(GetDeviceInfo(device_id), indent=2))
+
+
+if __name__ == '__main__':
+  main(sys.argv)
