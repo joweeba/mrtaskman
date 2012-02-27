@@ -18,7 +18,7 @@ __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 import logging
 import os
 import subprocess
-import urllib
+import urllib2
 
 from client import mrtaskman_api
 
@@ -48,6 +48,35 @@ class TmpDir(object):
     if ret:
       logging.error('Error invoking %s. Exit code: %d', command, ret)
     return ret
+
+
+def DownloadFileWithTimeout(url, destination, timeout=30*60):
+  """Downloads given file from the web to destination file path.
+
+  Times out after given timeout in seconds.
+
+  Args:
+    url: Where to download from as str.
+    destination: Local filepath to write to as str.
+    timeout: How long to wait before giving up in seconds as float.
+
+  Raises:
+    urllib2.HTTPError on HTTP error.
+    urllib2.URLError on timeout or other error resolving URL.
+  """
+  webfile = urllib2.urlopen(url, timeout=timeout)
+  try:
+    # TODO(jeff.carollo): Checksums.
+    localfile = open(destination, 'wb')
+    BLOCK_SIZE = 8192
+    while True:
+      buffer = webfile.read(BLOCK_SIZE)
+      if not buffer:
+        break
+      localfile.write(buffer)
+
+  finally:
+    localfile.close()
 
 
 def DownloadAndInstallPackage(package_name, package_version, root_dir):
@@ -100,7 +129,7 @@ def DownloadAndInstallFile(package_file, root_dir):
     pass
 
   # Download the file into the correct place.
-  urllib.urlretrieve(package_file['download_url'], file_path)
+  DownloadFileWithTimeout(package_file['download_url'], file_path)
 
   # Set file mode using octal digits.
   os.chmod(file_path, int(package_file['file_mode'], 8))
