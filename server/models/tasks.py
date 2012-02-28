@@ -130,13 +130,13 @@ def DeleteById(task_id):
   return True
 
 
-def GetByExecutor(executor):
+def GetByExecutor(executor, limit=1000):
   """Retrieves a list of tasks waiting for a given executor."""
   tasks = (Task.all()
                .ancestor(MakeParentKey())
                .filter('state =', TaskStates.SCHEDULED)
                .filter('executor_requirements =', executor)
-               .fetch(limit=1000))
+               .fetch(limit=limit))
   return tasks
 
 

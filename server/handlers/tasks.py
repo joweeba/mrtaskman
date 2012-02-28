@@ -344,7 +344,9 @@ class TaskCompleteUrlHandler(webapp2.RequestHandler):
 class TasksListHandler(webapp2.RequestHandler):
   """Lists tasks by some ordering."""
   def get(self, executor):
-    task_list = tasks.GetByExecutor(executor)
+    limit = self.request.get('limit', 1000)
+    limit = int(limit)
+    task_list = tasks.GetByExecutor(executor, limit)
     response = {}
     response['kind'] = 'mrtaskman#task_list'
     response['tasks'] = [model_to_dict.ModelToDict(task)
