@@ -293,6 +293,7 @@ class MacOsWorker(object):
   def DownloadAndInstallPackages(self, packages, tmpdir):
     # TODO(jeff.carollo): Create a package cache if things take off.
     for package in packages:
+      attempts = 0
       while True:
         try:
           package_installer.DownloadAndInstallPackage(
@@ -303,12 +304,20 @@ class MacOsWorker(object):
           logging.error('Got HTTPError %d trying to grab package %s.%s: %s',
               e.code, package['name'], package['version'], e)
           raise MrTaskmanUnrecoverableHttpError(e)
-        except urllib2.URLError:
+        except urllib2.URLError, e:
           logging.error('Got URLError trying to grab package %s.%s: %s',
               package['name'], package['version'], e)
           logging.info('Retrying in 10')
-          time.sleep(10)
-          continue
+          attempts += 1
+          # TODO(jeff.carollo): Figure out a robust way to do this.
+          # Likely need to just try a few times to get around Internet blips
+          # then mark task as failed for package reasons.
+          if attempts < 10:
+            time.sleep(10)
+            continue
+          else:
+            logging.error('Failed to grab package for 100 attempts. Aborting.')
+            raise MrTaskmanUnrecoverableHttpError(e)
         except IOError, e:
           logging.error('Got IOError trying to grab package %s.%s: %s',
               package['name'], package['version'], e)
@@ -322,6 +331,9 @@ def main(argv):
     sys.stderr.write('%s\n' % e)
     sys.exit(1)
     return
+
+  # Set default socket timeout to 2 hours so that we catch missing timeouts.
+  socket.setdefaulttimeout(2 * 60 * 60)
 
   try:
     FORMAT = '%(asctime)-15s %(message)s'
