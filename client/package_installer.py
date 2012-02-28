@@ -115,8 +115,9 @@ def DownloadAndInstallFile(package_file, root_dir):
   Returns:
     None
   """
-  logging.info('DownloadAndInstallFile %s %s',
-               package_file['destination'], root_dir)
+  logging.info('DownloadAndInstallFile %s %s %s',
+               package_file['destination'], root_dir,
+               package_file['download_url'])
   file_path = os.path.join(root_dir, package_file['destination'])
 
   last_slash = file_path.rfind(os.sep)
