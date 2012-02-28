@@ -337,6 +337,21 @@ class TaskCompleteUrlHandler(webapp2.RequestHandler):
     response['task_complete_url'] = MakeTaskCompleteUrl(task_id)
 
     json.dump(response, self.response.out, indent=2)
+    self.response.headers['Content-Type'] = 'application/json'
+    self.response.out.write('\n')
+
+
+class TasksListHandler(webapp2.RequestHandler):
+  """Lists tasks by some ordering."""
+  def get(self, executor):
+    task_list = tasks.GetByExecutor(executor)
+    response = {}
+    response['kind'] = 'mrtaskman#task_list'
+    response['tasks'] = [model_to_dict.ModelToDict(task)
+                         for task in task_list]
+
+    json.dump(response, self.response.out, indent=2)
+    self.response.headers['Content-Type'] = 'application/json'
     self.response.out.write('\n')
 
 
@@ -345,4 +360,5 @@ app = webapp2.WSGIApplication([
     ('/tasks/([0-9]+)/task_complete_url', TaskCompleteUrlHandler),
     ('/tasks/assign', TasksAssignHandler),
     ('/tasks/schedule', TasksScheduleHandler),
+    ('/executors/([a-zA-Z0-9]+)', TasksListHandler),
     ], debug=True)

@@ -130,6 +130,16 @@ def DeleteById(task_id):
   return True
 
 
+def GetByExecutor(executor):
+  """Retrieves a list of tasks waiting for a given executor."""
+  tasks = (Task.all()
+               .ancestor(MakeParentKey())
+               .filter('state =', TaskStates.SCHEDULED)
+               .filter('executor_requirements =', executor)
+               .fetch(limit=1000))
+  return tasks
+
+
 def Assign(worker, executor_capabilities):
   """Looks for Tasks worker can execute, assigning one if possible.
 

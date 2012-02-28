@@ -21,6 +21,8 @@ handlers:
   script: handlers.tasks.app
 - url: /tasks/timeout
   script: models.tasks.app
+- url: /executors/[a-zA-Z0-9]+
+  script: handlers.tasks.app
 - url: /taskresultfiles/.+
   script: handlers.taskresultfiles.app
 
