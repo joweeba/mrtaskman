@@ -29,6 +29,8 @@ handlers:
 # Packages.
 - url: /packages/create
   script: handlers.packages.app
+- url: /packages/deleteall
+  script: models.packages.app
 - url: /packages/[a-zA-Z]+\.[0-9.]+
   script: handlers.packages.app
 - url: /packagefiles/.+

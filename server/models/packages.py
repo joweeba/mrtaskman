@@ -14,10 +14,12 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+from google.appengine.api import taskqueue
 from google.appengine.ext import db
 from google.appengine.ext.blobstore import blobstore
 
 import logging
+import webapp2
 
 
 class Error(Exception):
@@ -30,7 +32,7 @@ class DuplicatePackageError(Error):
 
 class PackageFile(db.Model):
   """A reference to a file in blobstore along with manifest information.
-  
+
   Could also be a reference to a file somewhere on the web, in which case
   there will be no blobstore info."""
 
@@ -46,7 +48,7 @@ class PackageFile(db.Model):
 
 class Package(db.Model):
   """MrTaskman's representation of a Package.
-  
+
   A Package will have a number of associated PackageFiles, all sharing the
   same unique parent key as the Package itself."""
   name = db.StringProperty(required=True)
@@ -136,3 +138,28 @@ def DeletePackageByNameAndVersion(name, version):
 
     db.delete(package_keys)
   return db.run_in_transaction(tx)
+
+
+class BulkDeleteHandler(webapp2.RequestHandler):
+  def get(self):
+    name = self.request.get('name', 'monkey')
+    task = taskqueue.Task(
+        method='POST',
+        params={'name': name},
+        url='/packages/deleteall')
+    task.add()
+    self.response.out.write('Task enqueued.')
+
+  def post(self):
+    name = self.request.get('name', 'monkey')
+    while True:
+      packages = Package.all().filter('name=', name).fetch(limit=20)
+      if not packages:
+        return
+      for package in packages:
+        DeletePackageByNameAndVersion(package.name, package.version)
+
+
+app = webapp2.WSGIApplication([
+    ('/packages/deleteall', BulkDeleteHandler),
+])
