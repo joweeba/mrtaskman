@@ -60,7 +60,7 @@ def main(argv):
     except subprocess.CalledProcessError, e:
       logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
       ExitWithErrorCode(e.returncode)
-  
+
     logging.info('Install work done successfully.')
     return 0
   finally:

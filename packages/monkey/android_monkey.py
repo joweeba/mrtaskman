@@ -14,7 +14,7 @@ import time
 from tasklib import apklib
 
 ADB_COMMAND = apklib.ADB_COMMAND
-MONKEY_COMMAND = ADB_COMMAND + 'shell /system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s'
+MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s; echo $? > /mnt/sdcard/ret"'
 
 
 def ExitWithErrorCode(error_code):
@@ -59,6 +59,7 @@ def main(argv):
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               shell=True)
+        apklib.CheckAdbShellExitCode()
       except subprocess.CalledProcessError, e:
         logging.error('Error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
@@ -72,7 +73,7 @@ def main(argv):
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
-    
+
     logging.info('Monkey work done successfully.')
     return 0
   finally:

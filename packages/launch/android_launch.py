@@ -14,7 +14,8 @@ from tasklib import apklib
 
 
 ADB_COMMAND = apklib.ADB_COMMAND
-LAUNCH_COMMAND = ADB_COMMAND + 'shell am start -W -S %s/.%s'
+LAUNCH_COMMAND = (ADB_COMMAND +
+    'shell "am start -S %s/%s; echo $? > /mnt/sdcard/ret"')
 
 
 def ExitWithErrorCode(error_code):
@@ -54,12 +55,14 @@ def main(argv):
       ExitWithErrorCode(e.returncode)
 
     try:
-      logging.info('Running command...')
+      logging.info('Running command %s.',
+          LAUNCH_COMMAND % (class_path, class_name))
       try:
         subprocess.check_call(LAUNCH_COMMAND % (class_path, class_name),
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               shell=True)
+        apklib.CheckAdbShellExitCode()
       except subprocess.CalledProcessError, e:
         logging.error('CalledProcessError %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
@@ -73,7 +76,7 @@ def main(argv):
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
-    
+
     logging.info('Launch work done successfully.')
     return 0
   finally:

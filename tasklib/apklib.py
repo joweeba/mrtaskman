@@ -112,3 +112,22 @@ def CheckAdbSuccess(adb_output):
     return
   adb_output.returncode = -5
   raise subprocess.CalledProcessError(-1, 'adb', output=adb_output)
+
+
+def CheckAdbShellExitCode():
+  output = subprocess.check_output(
+      ADB_COMMAND + 'shell cat /mnt/sdcard/ret',
+      stderr=sys.stderr,
+      shell=True)
+  if not output:
+    raise subprocess.CalledProcessError(-12, 'adb cat /mnt/sdcard/ret',
+        output)
+  try:
+    ret = int(output)
+  except ValueError:
+    raise subprocess.CalledProcessError(-10, 'adb cat /mnt/sdcard/ret',
+        output)
+
+  if ret != 0:
+    raise subprocess.CalledProcessError(ret, 'adb shell non-zero exit code',
+        output)
