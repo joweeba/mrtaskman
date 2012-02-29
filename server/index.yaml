@@ -14,3 +14,10 @@ indexes:
   properties:
   - name: __key__
     direction: desc
+
+- kind: Task
+  properties:
+  - name: executor_requirements
+  - name: state
+  - name: priority
+    direction: desc

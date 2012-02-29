@@ -86,17 +86,26 @@ class TasksScheduleHandler(webapp2.RequestHandler):
       self.response.set_status(400)
       return
 
+    priority = parsed_config['task'].get('priority', 0)
+    try:
+      logging.info('priority is %s', priority)
+      priority = int(priority)
+    except ValueError:
+      self.response.out.write('task.priority must be an integer\n')
+      self.response.set_status(400)
+      return
+
     user = users.GetCurrentUser()
 
     scheduled_task = tasks.Schedule(
-        name, config, user, executor_requirements)
-    
+        name, config, user, executor_requirements, priority)
+
     try:
       email = user.email()
     except:
       email = 'unauthenticated'
 
-    task_id = scheduled_task.key().id_or_name()
+    task_id = scheduled_task.key().id()
     logging.info('%s created task %s with ID %s.',
         email, name, task_id)
     logging.info('Config: %s', config)
@@ -104,7 +113,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
     # Success. Write response.
     self.response.headers['Content-Type'] = 'application/json'
     response = dict()
-    response['id'] = task_id
+    response['id'] = int(task_id)
     response['kind'] = 'mrtaskman#taskid'
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
@@ -121,7 +130,7 @@ class TasksHandler(webapp2.RequestHandler):
       self.error(404)
       return
 
-    # Success. Write response. 
+    # Success. Write response.
     self.response.headers['Content-Type'] = 'application/json'
     response = model_to_dict.ModelToDict(task)
     response['kind'] = 'mrtaskman#task'

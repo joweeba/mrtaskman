@@ -86,6 +86,7 @@ class Task(db.Model):
   attempts = db.IntegerProperty(required=True, default=0)
   max_attempts = db.IntegerProperty(required=True, default=3)
   executor_requirements = db.StringListProperty(required=True)
+  priority = db.IntegerProperty(required=True, default=0)
 
   # Set once state == TaskStates.ASSIGNED.
   assigned_time = db.DateTimeProperty(required=False)
@@ -106,13 +107,14 @@ def MakeParentKey():
   return db.Key.from_path('TaskParent', '%s' % shard)
 
 
-def Schedule(name, config, scheduled_by, executor_requirements):
+def Schedule(name, config, scheduled_by, executor_requirements, priority=0):
   """Adds a new Task with given name, config, user and requirements."""
   task = Task(parent=MakeParentKey(),
               name=name,
               config=config,
               scheduled_by=scheduled_by,
-              executor_requirements=executor_requirements)
+              executor_requirements=executor_requirements,
+              priority=priority)
   db.put(task)
   return task
 
@@ -161,6 +163,8 @@ def Assign(worker, executor_capabilities):
   def tx(task, executor_capability):
     task = db.get(task.key())
     if task is not None:
+      if task.state != TaskStates.SCHEDULED:
+        return None
       task.state = TaskStates.ASSIGNED
       task.assigned_time = datetime.datetime.now()
       task.assigned_worker = worker
@@ -177,14 +181,20 @@ def Assign(worker, executor_capabilities):
 
   logging.info('Trying to assign task for %s', executor_capabilities)
   for executor_capability in executor_capabilities:
-    task = (Task.all()
-                .filter('state =', TaskStates.SCHEDULED)
-                .filter('executor_requirements =', executor_capability)
-                .get())
-    if task:
-      task = db.run_in_transaction(tx, task, executor_capability)
+    while True:
+      task = (Task.all()
+                  .filter('state =', TaskStates.SCHEDULED)
+                  .filter('executor_requirements =', executor_capability)
+                  .order('-priority')
+                  .get())
       if task:
-        return task
+        task = db.run_in_transaction(tx, task, executor_capability)
+        if task:
+          return task
+        else:
+          continue
+      else:
+        break
   return None
 
 
