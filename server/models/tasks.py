@@ -130,9 +130,9 @@ def DeleteById(task_id):
   return True
 
 
-def GetByExecutor(executor, limit=1000):
+def GetByExecutor(executor, limit=1000, keys_only=False):
   """Retrieves a list of tasks waiting for a given executor."""
-  tasks = (Task.all()
+  tasks = (Task.all(keys_only=keys_only)
                .ancestor(MakeParentKey())
                .filter('state =', TaskStates.SCHEDULED)
                .filter('executor_requirements =', executor)
@@ -307,6 +307,28 @@ class TaskTimeoutHandler(webapp2.RequestHandler):
     db.run_in_transaction(tx)
 
 
+def DeleteByExecutor(executor):
+  delete_task = taskqueue.Task(
+      method='POST',
+      url='/executors/%s/deleteall' % executor)
+  delete_task.add()
+
+
+class DeleteAllByExecutorHandler(webapp2.RequestHandler):
+  """Deletes all tasks for a given executor."""
+  def post(self, executor):
+    count = 0
+    while True:
+      task_keys = GetByExecutor(executor, limit=1000, keys_only=True)
+      if not task_keys:
+        logging.info('Done. Deleted %d tasks total.', count)
+        return
+      logging.info('Deleting %d tasks.', len(task_keys))
+      count += len(task_keys)
+      db.delete(task_keys)
+
+
 app = webapp2.WSGIApplication([
-    ('/tasks/timeout', TaskTimeoutHandler)
+    ('/tasks/timeout', TaskTimeoutHandler),
+    ('/executors/([a-zA-Z0-9]+)/deleteall', DeleteAllByExecutorHandler),
     ], debug=True)

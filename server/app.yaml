@@ -21,6 +21,10 @@ handlers:
   script: handlers.tasks.app
 - url: /tasks/timeout
   script: models.tasks.app
+  login: admin
+- url: /executors/[a-zA-Z0-9]+/deleteall
+  script: models.tasks.app
+  login: admin
 - url: /executors/[a-zA-Z0-9]+
   script: handlers.tasks.app
 - url: /taskresultfiles/.+

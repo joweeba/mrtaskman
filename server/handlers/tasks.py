@@ -341,9 +341,9 @@ class TaskCompleteUrlHandler(webapp2.RequestHandler):
     self.response.out.write('\n')
 
 
-class TasksListHandler(webapp2.RequestHandler):
-  """Lists tasks by some ordering."""
+class TasksListByExecutorHandler(webapp2.RequestHandler):
   def get(self, executor):
+    """Lists tasks for a given executor."""
     limit = self.request.get('limit', 1000)
     limit = int(limit)
     task_list = tasks.GetByExecutor(executor, limit)
@@ -356,11 +356,17 @@ class TasksListHandler(webapp2.RequestHandler):
     self.response.headers['Content-Type'] = 'application/json'
     self.response.out.write('\n')
 
+  def delete(self, executor):
+    """Deletes all tasks for a given executor."""
+    tasks.DeleteByExecutor(executor)
+    self.response.out.write('Delete task started.\n')
+    self.response.headers['Content-Type'] = 'text/plain'
+
 
 app = webapp2.WSGIApplication([
     ('/tasks/([0-9]+)', TasksHandler),
     ('/tasks/([0-9]+)/task_complete_url', TaskCompleteUrlHandler),
     ('/tasks/assign', TasksAssignHandler),
     ('/tasks/schedule', TasksScheduleHandler),
-    ('/executors/([a-zA-Z0-9]+)', TasksListHandler),
+    ('/executors/([a-zA-Z0-9]+)', TasksListByExecutorHandler),
     ], debug=True)
