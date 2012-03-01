@@ -16,6 +16,7 @@ indexes:
     direction: desc
 
 - kind: Task
+  ancestor: yes
   properties:
   - name: executor_requirements
   - name: state
