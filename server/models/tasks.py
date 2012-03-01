@@ -22,7 +22,6 @@ from google.appengine.ext.blobstore import blobstore
 import datetime
 import json
 import logging
-import random
 import urllib
 import webapp2
 
@@ -103,8 +102,7 @@ class Task(db.Model):
 
 
 def MakeParentKey():
-  shard = random.randint(0, 10)
-  return db.Key.from_path('TaskParent', '%s' % shard)
+  return db.Key.from_path('TaskParent', '0')
 
 
 def Schedule(name, config, scheduled_by, executor_requirements, priority=0):
@@ -121,12 +119,8 @@ def Schedule(name, config, scheduled_by, executor_requirements, priority=0):
 
 def GetById(task_id):
   """Retrieves Task with given integer task_id."""
-  keys = [db.Key.from_path('TaskParent', '%s' % shard, 'Task', task_id)
-          for shard in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-  models = db.get(keys)
-  for model in models:
-    if model:
-      return model
+  key = db.Key.from_path('TaskParent', '0', 'Task', task_id)
+  return db.get(key)
 
 
 def DeleteById(task_id):
@@ -141,6 +135,7 @@ def DeleteById(task_id):
 def GetByExecutor(executor, limit=1000, keys_only=False):
   """Retrieves a list of tasks waiting for a given executor."""
   tasks = (Task.all(keys_only=keys_only)
+               .ancestor(MakeParentKey())
                .filter('state =', TaskStates.SCHEDULED)
                .filter('executor_requirements =', executor)
                .fetch(limit=limit))
@@ -160,8 +155,14 @@ def Assign(worker, executor_capabilities):
   assert worker
   assert executor_capabilities
 
-  def tx(task, executor_capability):
-    task = db.get(task.key())
+  logging.info('Trying to assign task for %s', executor_capabilities)
+  def tx(executor_capability):
+    task = (Task.all()
+                .ancestor(MakeParentKey())
+                .filter('state =', TaskStates.SCHEDULED)
+                .filter('executor_requirements =', executor_capability)
+                .order('-priority')
+                .get())
     if task is not None:
       if task.state != TaskStates.SCHEDULED:
         return None
@@ -179,22 +180,10 @@ def Assign(worker, executor_capabilities):
       return task
     return None
 
-  logging.info('Trying to assign task for %s', executor_capabilities)
   for executor_capability in executor_capabilities:
-    while True:
-      task = (Task.all()
-                  .filter('state =', TaskStates.SCHEDULED)
-                  .filter('executor_requirements =', executor_capability)
-                  .order('-priority')
-                  .get())
-      if task:
-        task = db.run_in_transaction(tx, task, executor_capability)
-        if task:
-          return task
-        else:
-          continue
-      else:
-        break
+    task = db.run_in_transaction(tx, executor_capability)
+    if task:
+      return task
   return None
 
 
@@ -204,8 +193,9 @@ def UploadTaskResult(task_id, attempt, exit_code,
                      device_serial_number, result_metadata):
   logging.info('Trying to upload result for task %d attempt %d',
                task_id, attempt)
-  def tx(task):
-    task = db.get(task.key())
+  def tx():
+    task = GetById(task_id)
+
     # Validate that task is in a state to accept results from worker.
     if not task:
       raise TaskNotFoundError()
@@ -240,8 +230,7 @@ def UploadTaskResult(task_id, attempt, exit_code,
     task.result = task_result
     db.put(task)
     return task
-  task = GetById(task_id)
-  task = db.run_in_transaction(tx, task)
+  task = db.run_in_transaction(tx)
 
   logging.info('Insert succeeded.')
   config = json.loads(task.config)
