@@ -1,6 +1,6 @@
 {
   "kind": "mrtaskman#create_package_request",
-  "name": "MonkeyPackage",
+  "name": "AndroidMonkeyPackage",
   "version": "1",
   "files": [
     {

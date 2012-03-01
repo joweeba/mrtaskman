@@ -15,7 +15,7 @@ from tasklib import apklib
 
 ADB_COMMAND = apklib.ADB_COMMAND
 LAUNCH_COMMAND = (ADB_COMMAND +
-    'shell "am start -S %s/%s; echo $? > /mnt/sdcard/ret"')
+    'shell "am start -S %s/%s; echo $? > /data/local/tmp/ret"')
 
 
 def ExitWithErrorCode(error_code):

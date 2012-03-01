@@ -14,7 +14,7 @@ import time
 from tasklib import apklib
 
 ADB_COMMAND = apklib.ADB_COMMAND
-MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s; echo $? > /mnt/sdcard/ret"'
+MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s; echo $? > /data/local/tmp/ret"'
 
 
 def ExitWithErrorCode(error_code):
