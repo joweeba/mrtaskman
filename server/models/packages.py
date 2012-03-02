@@ -63,11 +63,6 @@ def MakePackageKey(name, version):
 
 
 def CreatePackage(name, version, created_by, files, urlfiles):
-  if not name.isalnum():
-    # TODO(jeff.carollo): Raise an appropriate Exception.
-    logging.error('Must have alphabetic package name.')
-    return None
-
   package_key = MakePackageKey(name, version)
 
   def tx():
