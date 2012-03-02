@@ -87,17 +87,21 @@ def main(argv):
         # Inspect and dump to logs the cmd stdout output.
         cmd_stdout = open(STDOUT_FILENAME, 'r')
         stdout_exitcode = apklib.DumpAndCheckErrorLogs(cmd_stdout, sys.stdout)
+      except Exception, e:
+        logging.error('Error while dumping command stdout: %s', str(e))
+        stdout_exitcode = -5  # Don't exit yet, allow stderr to be dumped.
       finally:
         cmd_stdout.close()
-        stdout_exitcode = -5
 
       try:
         # Inspect and dump to logs the cmd stderr output.
         cmd_stderr = open(STDERR_FILENAME, 'r')
         stderr_exitcode = apklib.DumpAndCheckErrorLogs(cmd_stderr, sys.stderr)
+      except Exception, e:
+        logging.error('Error while dumping command stderr: %s', str(e))
+        stderr_exitcode = -5
       finally:        
         cmd_stderr.close()
-        stderr_exitcode = -5
 
       if stdout_exitcode != 0:
         logging.info('Error found in stdout.')
