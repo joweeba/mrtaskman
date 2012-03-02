@@ -257,7 +257,7 @@ class MrTaskmanApi(object):
   def MakeTaskUrl(self, task_id):
     """Returns the URL to the task given by task_id."""
     return '%s/tasks/%d' % (FLAGS.mrtaskman_address, task_id)
- 
+
   def CreatePackage(self, create_package_request):
     """Performs a packages.create with given create_package_request.
 

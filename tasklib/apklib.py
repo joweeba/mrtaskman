@@ -110,8 +110,7 @@ def CheckAdbSuccess(adb_output):
   """Cover the fail."""
   if 'Success' in adb_output:
     return
-  adb_output.returncode = -5
-  raise subprocess.CalledProcessError(-1, 'adb', output=adb_output)
+  raise subprocess.CalledProcessError(-5, 'adb', output=adb_output)
 
 
 ERROR_PHRASES = [
@@ -144,16 +143,16 @@ def DupAndCheckErrorLogs(source, dest):
 
 def CheckAdbShellExitCode():
   output = subprocess.check_output(
-      ADB_COMMAND + 'shell cat /mnt/sdcard/ret',
+      ADB_COMMAND + 'shell cat /data/local/tmp/ret',
       stderr=sys.stderr,
       shell=True)
   if not output:
-    raise subprocess.CalledProcessError(-12, 'adb cat /mnt/sdcard/ret',
+    raise subprocess.CalledProcessError(-12, 'adb cat /data/local/tmp/ret',
         output)
   try:
     ret = int(output)
   except ValueError:
-    raise subprocess.CalledProcessError(-10, 'adb cat /mnt/sdcard/ret',
+    raise subprocess.CalledProcessError(-10, 'adb cat /data/local/tmp/ret',
         output)
 
   if ret != 0:
