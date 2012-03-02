@@ -123,17 +123,18 @@ ERROR_PHRASES = [
 def _ContainsErrorPhrase(line):
   for error_phrase in ERROR_PHRASES:
     if error_phrase in line:
+      logging.error('ERROR PHRASE MATCH: %s', error_phrase)
       return True
   return False
 
 
-def DupAndCheckErrorLogs(source, dest):
+def DumpAndCheckErrorLogs(source, dest):
   """Look for indications the task failed from the logs."""
   errors = False
   for line in source:
     if not errors and _ContainsErrorPhrase(line):
       errors = True
-    dest.write(errors)
+    dest.write(line)
   dest.flush()
 
   if errors:

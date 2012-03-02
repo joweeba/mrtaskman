@@ -64,15 +64,15 @@ def main(argv):
       cmd_stderr = open(STDERR_FILENAME, 'w')
       try:
         subprocess.check_call(LAUNCH_COMMAND % (class_path, class_name),
-                              stdout=sys.stdout,
-                              stderr=sys.stderr,
+                              stdout=cmd_stdout,
+                              stderr=cmd_stderr,
                               shell=True)
         apklib.CheckAdbShellExitCode()
       except subprocess.CalledProcessError, e:
         logging.error('CalledProcessError %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
     finally:
-      md_stdout.flus()
+      cmd_stdout.flush()
       cmd_stdout.close()
       cmd_stderr.flush()
       cmd_stderr.close()
@@ -86,18 +86,29 @@ def main(argv):
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
 
-      # Inspect and dump to logs the cmd stdout output.
-      cmd_stdout = open(STDOUT_FILENAME, 'r')
-      stdout_exitcode = apklib.DupAndCheckErrorLogs(cmd_stdout, sys.stdout)
+      try:
+        # Inspect and dump to logs the cmd stdout output.
+        cmd_stdout = open(STDOUT_FILENAME, 'r')
+        stdout_exitcode = apklib.DumpAndCheckErrorLogs(cmd_stdout, sys.stdout)
+      finally:
+        cmd_stdout.close()
+        stdout_exitcode = -5
 
-      # Inspect and dump to logs the cmd stderr output.
-      cmd_stderr = open(STDERR_FILENAME, 'r')
-      stderr_exitcode = apklib.DupAndCheckErrorLogs(cmd_stderr, sys.stderr)
+      try:
+        # Inspect and dump to logs the cmd stderr output.
+        cmd_stderr = open(STDERR_FILENAME, 'r')
+        stderr_exitcode = apklib.DumpAndCheckErrorLogs(cmd_stderr, sys.stderr)
+      finally:        
+        cmd_stderr.close()
+        stderr_exitcode = -5
 
-      if cmd_stdout > 0:
-        ExitWithErrorCode(cmd_stdout)
-      if stderr_exitcode > 0:
+      if stdout_exitcode != 0:
+        logging.info('Error found in stdout.')
+        ExitWithErrorCode(stdout_exitcode)
+      if stderr_exitcode != 0:
+        logging.info('Error found in stderr.')
         ExitWithErrorCode(stderr_exitcode)
+
     logging.info('Launch work done successfully.')
     return 0
   finally:
