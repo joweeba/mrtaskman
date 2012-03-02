@@ -58,6 +58,8 @@ def main(argv):
       ExitWithErrorCode(e.returncode)
 
     try:
+      if '.' not in class_name:
+        class_name = '.%s' % class_name
       logging.info('Running command %s.',
           LAUNCH_COMMAND % (class_path, class_name))
       cmd_stdout = open(STDOUT_FILENAME, 'w')
@@ -103,7 +105,7 @@ def main(argv):
       except Exception, e:
         logging.error('Error while dumping command stderr: %s', str(e))
         stderr_exitcode = -5
-      finally:        
+      finally:
         cmd_stderr.close()
 
       if stdout_exitcode != 0:
