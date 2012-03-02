@@ -35,7 +35,7 @@ handlers:
   script: handlers.packages.app
 - url: /packages/deleteall
   script: models.packages.app
-- url: /packages/[a-zA-Z]+\.[0-9.]+
+- url: /packages/[a-zA-Z0-9\-_]+\.[0-9.]+
   script: handlers.packages.app
 - url: /packagefiles/.+
   script: handlers.packagefiles.app

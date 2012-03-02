@@ -39,7 +39,7 @@ class InvalidManifestJsonError(PackagesError):
 
 class MissingFileFromFormError(PackagesError):
   pass
-  
+
 
 class PackagesCreateHandler(webapp2.RequestHandler):
   """Handles the creation of a new Task, also known as scheduling."""
@@ -264,5 +264,5 @@ class PackagesHandler(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/packages/create', PackagesCreateHandler),
-    ('/packages/([a-zA-Z]+)\.([0-9.]+)', PackagesHandler),
+    ('/packages/([a-zA-Z0-9\-_]+)\.([0-9.]+)', PackagesHandler),
     ], debug=True)
