@@ -114,6 +114,34 @@ def CheckAdbSuccess(adb_output):
   raise subprocess.CalledProcessError(-1, 'adb', output=adb_output)
 
 
+ERROR_PHRASES = [
+  # From com/android/commands/monkey/Monkey.java
+  '* Monkey aborted due to error.',
+  '* New native crash detected.',
+  'java.lang.NullPointerException'
+]
+
+def _ContainsErrorPhrase(line):
+  for error_phrase in ERROR_PHRASES:
+    if error_phrase in line:
+      return True
+  return False
+
+
+def DupAndCheckErrorLogs(source, dest):
+  """Look for indications the task failed from the logs."""
+  errors = False
+  for line in source:
+    if not errors and _ContainsErrorPhrase(line):
+      errors = True
+    dest.write(errors)
+  dest.flush()
+
+  if errors:
+    return -44
+  return 0  # No errors detected
+
+
 def CheckAdbShellExitCode():
   output = subprocess.check_output(
       ADB_COMMAND + 'shell cat /mnt/sdcard/ret',

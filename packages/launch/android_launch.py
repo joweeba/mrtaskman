@@ -17,6 +17,9 @@ ADB_COMMAND = apklib.ADB_COMMAND
 LAUNCH_COMMAND = (ADB_COMMAND +
     'shell "am start -S %s/%s; echo $? > /mnt/sdcard/ret"')
 
+STDOUT_FILENAME = 'cmd_stdout.log'
+STDERR_FILENAME = 'cmd_stderr.log'
+
 
 def ExitWithErrorCode(error_code):
   if error_code == 0:
@@ -57,6 +60,8 @@ def main(argv):
     try:
       logging.info('Running command %s.',
           LAUNCH_COMMAND % (class_path, class_name))
+      cmd_stdout = open(STDOUT_FILENAME, 'w')
+      cmd_stderr = open(STDERR_FILENAME, 'w')
       try:
         subprocess.check_call(LAUNCH_COMMAND % (class_path, class_name),
                               stdout=sys.stdout,
@@ -67,6 +72,10 @@ def main(argv):
         logging.error('CalledProcessError %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
     finally:
+      md_stdout.flus()
+      cmd_stdout.close()
+      cmd_stderr.flush()
+      cmd_stderr.close()
       logging.info('Uninstalling .apk...')
       try:
         output = subprocess.check_output(
@@ -77,6 +86,18 @@ def main(argv):
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
 
+      # Inspect and dump to logs the cmd stdout output.
+      cmd_stdout = open(STDOUT_FILENAME, 'r')
+      stdout_exitcode = apklib.DupAndCheckErrorLogs(cmd_stdout, sys.stdout)
+
+      # Inspect and dump to logs the cmd stderr output.
+      cmd_stderr = open(STDERR_FILENAME, 'r')
+      stderr_exitcode = apklib.DupAndCheckErrorLogs(cmd_stderr, sys.stderr)
+
+      if cmd_stdout > 0:
+        ExitWithErrorCode(cmd_stdout)
+      if stderr_exitcode > 0:
+        ExitWithErrorCode(stderr_exitcode)
     logging.info('Launch work done successfully.')
     return 0
   finally:

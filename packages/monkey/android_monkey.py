@@ -16,6 +16,9 @@ from tasklib import apklib
 ADB_COMMAND = apklib.ADB_COMMAND
 MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s; echo $? > /mnt/sdcard/ret"'
 
+STDOUT_FILENAME = 'cmd_stdout.log'
+STDERR_FILENAME = 'cmd_stderr.log'
+
 
 def ExitWithErrorCode(error_code):
   if error_code == 0:
@@ -54,16 +57,22 @@ def main(argv):
 
     try:
       logging.info('Running command...')
+      cmd_stdout = open(STDOUT_FILENAME, 'w')
+      cmd_stderr = open(STDERR_FILENAME, 'w')
       try:
         subprocess.check_call(MONKEY_COMMAND % (class_path, ' '.join(argv)),
-                              stdout=sys.stdout,
-                              stderr=sys.stderr,
+                              stdout=cmnd_stdout,
+                              stderr=cmd_stderr,
                               shell=True)
         apklib.CheckAdbShellExitCode()
       except subprocess.CalledProcessError, e:
         logging.error('Error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
     finally:
+      cmd_stdout.flus()
+      cmd_stdout.close()
+      cmd_stderr.flush()
+      cmd_stderr.close()
       logging.info('Uninstalling .apk...')
       try:
         output = subprocess.check_output(
@@ -73,6 +82,19 @@ def main(argv):
       except subprocess.CalledProcessError, e:
         logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
+
+      # Inspect and dump to logs the cmd stdout output.
+      cmd_stdout = open(STDOUT_FILENAME, 'r')
+      stdout_exitcode = apklib.DupAndCheckErrorLogs(cmd_stdout, sys.stdout)
+
+      # Inspect and dump to logs the cmd stderr output.
+      cmd_stderr = open(STDERR_FILENAME, 'r')
+      stderr_exitcode = apklib.DupAndCheckErrorLogs(cmd_stderr, sys.stderr)
+
+      if cmd_stdout > 0:
+        ExitWithErrorCode(cmd_stdout)
+      if stderr_exitcode > 0:
+        ExitWithErrorCode(stderr_exitcode)
 
     logging.info('Monkey work done successfully.')
     return 0
