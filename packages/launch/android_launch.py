@@ -4,6 +4,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import datetime
 import logging
 import os
 import subprocess
@@ -15,7 +16,7 @@ from tasklib import apklib
 
 ADB_COMMAND = apklib.ADB_COMMAND
 LAUNCH_COMMAND = (ADB_COMMAND +
-    'shell "am start -n %s/%s; echo $? > /data/local/tmp/ret"')
+    'shell "am start --activity-reset-task-if-needed -W -n %s/%s; echo $? > /data/local/tmp/ret"')
 
 STDOUT_FILENAME = 'cmd_stdout.log'
 STDERR_FILENAME = 'cmd_stderr.log'
@@ -60,16 +61,45 @@ def main(argv):
     try:
       if '.' not in class_name:
         class_name = '.%s' % class_name
-      logging.info('Running command %s.',
-          LAUNCH_COMMAND % (class_path, class_name))
+      command = LAUNCH_COMMAND % (class_path, class_name)
+      logging.info('Running command %s.', command)
       cmd_stdout = open(STDOUT_FILENAME, 'w')
       cmd_stderr = open(STDERR_FILENAME, 'w')
       try:
+        timeout = datetime.timedelta(0, 30)  # Give the thing 30 seconds.
+        begin_time = datetime.datetime.now()
+        timeout_time = begin_time + timeout
+        process = subprocess.Popen(args=command,
+                                   stdout=cmd_stdout,
+                                   stderr=cmd_stderr,
+                                   shell=True)
+
+        ret = None
+        while None == ret and (datetime.datetime.now() < timeout_time):
+          time.sleep(0.02)
+          ret = process.poll()
+
+        finished_time = datetime.datetime.now()
+        if finished_time >= timeout_time and (None == ret):
+          logging.error('command %s timed out.', command)
+          process.terminate()
+          process.wait()
+          ret = -99
+
+        execution_time = finished_time - begin_time
+        logging.info('execution_time: %s', execution_time)
+
+        # Old.
+        '''
         subprocess.check_call(LAUNCH_COMMAND % (class_path, class_name),
                               stdout=cmd_stdout,
                               stderr=cmd_stderr,
                               shell=True)
+        '''
         apklib.CheckAdbShellExitCode()
+        if ret != 0:
+          logging.error('adb command exited with code %s', ret)
+          ExitWithErrorCode(ret)
       except subprocess.CalledProcessError, e:
         logging.error('CalledProcessError %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
