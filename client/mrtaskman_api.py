@@ -19,15 +19,19 @@ import json
 import logging
 import urllib2
 
+
 try:
+  # Imports non-AppEngine.
   import gflags
   FLAGS = gflags.FLAGS
   gflags.DEFINE_string('mrtaskman_address', 'http://mrtaskman.appspot.com',
                        'URL of MrTaskman server to connect to.')
 except ImportError:
+  # Imports on AppEngine.
+  import settings
   # No gflags, use defaults.
   class Flags(object):
-    mrtaskman_address = 'http://mrtaskman.appspot.com'
+    mrtaskman_address = settings.MRTASKMAN_URL
   FLAGS = Flags()
 
 try:
@@ -39,11 +43,13 @@ except ImportError:
 # Define portable MakeHttpRequest adapter.
 try:
   from google.appengine.api import urlfetch
-  def MakeHttpRequest(url, method='GET', headers={}, body=None, timeout=55):
+  def MakeHttpRequest(url, method='GET', headers={}, body=None, timeout=25):
     """Makes HTTP request and returns read response.
 
     Raises urllib2.HTTPError on non-200 response.
     """
+    logging.info('Making %s call to %s with HEADERS:\n%s\n\nBODY:\n%s',
+                 method, url, headers, body)
     response = urlfetch.fetch(url, payload=body, method=method, headers=headers,
                               deadline=timeout)
     response_body = response.content
@@ -53,8 +59,16 @@ try:
       class Readable:
         def __init__(self, data):
           self.data = data
+          self.done_ = False
 
         def read(self):
+          self.done_ = True
+          return self.data
+
+        def readline(self):
+          if self.done_:
+            return None
+          self.done_ = True
           return self.data
 
       raise urllib2.HTTPError(url, status_code, 'An HTTPError occurred.',
@@ -67,6 +81,8 @@ except ImportError:
 
     Raises urllib2.HTTPError on non-200 response.
     """
+    logging.info('Making %s call to %s with HEADERS:\n%s\n\nBODY:\n%s',
+                 method, url, headers, body)
     request = urllib2.Request(url, body, headers)
     request.get_method = lambda: method
 
@@ -242,7 +258,7 @@ class MrTaskmanApi(object):
     (body, headers) = http_file_upload.EncodeMultipartHttpFormData(
         {},
         [{'name': 'task_result',
-          'Content-Type': 'application/json;charset=utf-8',
+          'Content-Type': 'application/json; charset=utf-8',
           'data': json.dumps(task_result, 'utf-8', indent=2)}],
         [{'name': 'STDOUT',
           'filename': 'stdout',
