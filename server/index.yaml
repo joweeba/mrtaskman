@@ -22,3 +22,9 @@ indexes:
   - name: state
   - name: priority
     direction: desc
+
+- kind: Task
+  properties:
+  - name: priority
+  - name: scheduled_time
+    direction: desc
