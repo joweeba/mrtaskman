@@ -86,6 +86,7 @@ class Task(db.Model):
   max_attempts = db.IntegerProperty(required=True, default=3)
   executor_requirements = db.StringListProperty(required=True)
   priority = db.IntegerProperty(required=True, default=0)
+  webhook = db.StringProperty(required=False)
 
   # Set once state == TaskStates.ASSIGNED.
   assigned_time = db.DateTimeProperty(required=False)
@@ -107,12 +108,14 @@ def MakeParentKey():
 
 def Schedule(name, config, scheduled_by, executor_requirements, priority=0):
   """Adds a new Task with given name, config, user and requirements."""
+  webhook = json.loads(config)['task'].get('webhook', None)
   task = Task(parent=MakeParentKey(),
               name=name,
               config=config,
               scheduled_by=scheduled_by,
               executor_requirements=executor_requirements,
-              priority=priority)
+              priority=priority,
+              webhook=webhook)
   db.put(task)
   return task
 
@@ -121,6 +124,17 @@ def GetById(task_id):
   """Retrieves Task with given integer task_id."""
   key = db.Key.from_path('TaskParent', '0', 'Task', task_id)
   return db.get(key)
+
+
+def GetByName(task_name):
+  """Returns list of Tasks with given name, or []."""
+  assert isinstance(task_name, basestring)
+  tasks = Task.all().filter('name =', task_name).order('-scheduled_time').fetch(limit=1000)
+  if not tasks:
+    return []
+  if not isinstance(tasks, list):
+    return [tasks]
+  return tasks
 
 
 def DeleteById(task_id):

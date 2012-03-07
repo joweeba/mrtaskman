@@ -16,15 +16,21 @@ indexes:
     direction: desc
 
 - kind: Task
-  ancestor: yes
   properties:
-  - name: executor_requirements
-  - name: state
-  - name: priority
+  - name: name
+  - name: scheduled_time
     direction: desc
 
 - kind: Task
   properties:
   - name: priority
   - name: scheduled_time
+    direction: desc
+
+- kind: Task
+  ancestor: yes
+  properties:
+  - name: executor_requirements
+  - name: state
+  - name: priority
     direction: desc

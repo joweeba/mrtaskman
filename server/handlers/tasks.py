@@ -372,10 +372,32 @@ class TasksListByExecutorHandler(webapp2.RequestHandler):
     self.response.headers['Content-Type'] = 'text/plain'
 
 
+class TasksListByNameHandler(webapp2.RequestHandler):
+  def get(self):
+    name = self.request.get('name', None)
+    if not name:
+      self.response.out.write('Param "name" is required.')
+      self.response.set_status(400)
+      return
+    name = name.decode('utf-8')
+
+    task_list = tasks.GetByName(name)
+
+    response = {}
+    response['kind'] = 'mrtaskman#task_list'
+    logging.info('tasks: %s', task_list)
+    response['tasks'] = [model_to_dict.ModelToDict(task)
+                         for task in task_list]
+    json.dump(response, self.response.out, indent=2)
+    self.response.headers['Content-Type'] = 'application/json'
+    self.response.out.write('\n')
+
+
 app = webapp2.WSGIApplication([
     ('/tasks/([0-9]+)', TasksHandler),
     ('/tasks/([0-9]+)/task_complete_url', TaskCompleteUrlHandler),
     ('/tasks/assign', TasksAssignHandler),
+    ('/tasks/list_by_name', TasksListByNameHandler),
     ('/tasks/schedule', TasksScheduleHandler),
     ('/executors/([a-zA-Z0-9]+)', TasksListByExecutorHandler),
     ], debug=True)

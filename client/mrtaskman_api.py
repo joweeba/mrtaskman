@@ -17,6 +17,7 @@ __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
 import json
 import logging
+import urllib
 import urllib2
 
 
@@ -81,8 +82,6 @@ except ImportError:
 
     Raises urllib2.HTTPError on non-200 response.
     """
-    logging.info('Making %s call to %s with HEADERS:\n%s\n\nBODY:\n%s',
-                 method, url, headers, body)
     request = urllib2.Request(url, body, headers)
     request.get_method = lambda: method
 
@@ -112,6 +111,30 @@ class MrTaskmanApi(object):
     assert isinstance(task_id, int)
 
     path = '/tasks/%d' % task_id
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {'Accept': 'application/json'}
+
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
+
+  def ListTasksByName(self, task_name):
+    """Performs a tasks.listByName on given task_name.
+
+    Args:
+      task_name: Name of task as str
+
+    Returns:
+      TaskList object.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(task_name, basestring)
+
+    path = '/tasks/list_by_name?name=%s' % urllib.quote(task_name)
     url = FLAGS.mrtaskman_address + path
     body = None
     headers = {'Accept': 'application/json'}

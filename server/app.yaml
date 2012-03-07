@@ -17,6 +17,8 @@ handlers:
   script: handlers.tasks.app
 - url: /tasks/assign
   script: handlers.tasks.app
+- url: /tasks/list_by_name
+  script: handlers.tasks.app
 - url: /tasks/schedule
   script: handlers.tasks.app
 - url: /tasks/timeout

@@ -55,6 +55,26 @@ def Task(argv):
     return e.code
 
 
+def ListTasksByName(argv):
+  try:
+    task_name = argv.pop(0)
+  except:
+    sys.stderr.write('tasks command requires a string task_name argiment.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    task = api.ListTasksByName(task_name)
+    json.dump(task, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
 def TaskCompleteUrl(argv):
   try:
     task_id = int(argv.pop(0))
@@ -370,7 +390,7 @@ COMMANDS:
   schedule {task_file}\tSchedules a new task from given task_file.
   task {id}\t\tRetrieve information on given task id.
   task_complete_url {id}\tRetrieve URL where task results can be posted.
-  tasks\t\t\tList available tasks. (Not Implemented)
+  tasks {name}\t\tList available tasks with given name.
   stdout {id}\t\tPrints stdout from completed task with given id.
   stderr {id}\t\tPrints stderr from completed task with given id.
 
@@ -392,7 +412,7 @@ COMMANDS = {
   'schedule': Schedule,
   'task': Task,
   'task_complete_url': TaskCompleteUrl,
-  'tasks': CommandNotImplemented,
+  'tasks': ListTasksByName,
   'stdout': Stdout,
   'stderr': Stderr,
   'createpackage': CreatePackage,
