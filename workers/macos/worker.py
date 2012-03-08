@@ -277,8 +277,24 @@ class MacOsWorker(object):
 
     execution_time = finished_time - begin_time
 
-    stdout = file(os.path.join(cwd, 'stdout'), 'rb')
-    stderr = file(os.path.join(cwd, 'stderr'), 'rb')
+    try:
+      stdout = file(os.path.join(cwd, 'stdout'), 'rb')
+    except IOError, e:
+      logging.error('stdout was not written.')
+      stdout = file(os.path.join(cwd, 'stdout'), 'w')
+      stdout.write('No stdout.')
+      stdout.flush()
+      stdout.close()
+      stdout = file(os.path.join(cwd, 'stdout'), 'rb')
+    try:
+      stderr = file(os.path.join(cwd, 'stderr'), 'rb')
+    except IOError, e:
+      logging.error('stderr was not written.')
+      stderr = file(os.path.join(cwd, 'stderr'), 'w')
+      stderr.write('No stderr.')
+      stderr.flush()
+      stderr.close()
+      stderr = file(os.path.join(cwd, 'stderr'), 'rb')
     try:
       result_metadata_file = file(os.path.join(cwd, 'result_metadata'), 'r')
       result_metadata = json.loads(result_metadata_file.read().decode('utf-8'))
