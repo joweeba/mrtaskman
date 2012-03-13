@@ -156,6 +156,44 @@ def GetByExecutor(executor, limit=1000, keys_only=False):
   return tasks
 
 
+def GetOldestTaskForCapability(executor_capability):
+  """Retrieves front of the queue for given executor capability.
+
+  Args:
+    executor_capability: Executor capability to search for as str.
+
+  Returns:
+    First Task in the queue, or None.
+  """
+  task = (Task.all()
+              .ancestor(MakeParentKey())
+              .filter('state =', TaskStates.SCHEDULED)
+              .filter('executor_requirements =', executor_capability)
+              .order('-priority')
+              .get())
+  return task
+
+
+def AssignTaskToWorker(task, worker):
+  """Takes given Task and assigns to given worker.
+
+  Args:
+    task: Task to assign.
+    worker: Name of worker as str.
+
+  Returns:
+    None
+  """
+  assert task
+  assert worker
+  task.state = TaskStates.ASSIGNED
+  task.assigned_time = datetime.datetime.now()
+  task.assigned_worker = worker
+  task.attempts += 1
+
+  db.put(task)
+
+
 def Assign(worker, executor_capabilities):
   """Looks for Tasks worker can execute, assigning one if possible.
 
@@ -171,30 +209,21 @@ def Assign(worker, executor_capabilities):
 
   logging.info('Trying to assign task for %s', executor_capabilities)
   def tx(executor_capability):
-    task = (Task.all()
-                .ancestor(MakeParentKey())
-                .filter('state =', TaskStates.SCHEDULED)
-                .filter('executor_requirements =', executor_capability)
-                .order('-priority')
-                .get())
-    if task is not None:
-      if task.state != TaskStates.SCHEDULED:
-        return None
-      task.state = TaskStates.ASSIGNED
-      task.assigned_time = datetime.datetime.now()
-      task.assigned_worker = worker
-      task.attempts += 1
-      logging.info('Assigning task %s to %s for %s.',
-                   task.key().id_or_name(),
-                   worker,
-                   executor_capability)
-      db.put(task)
-      logging.info('Assignment successful.')
-      ScheduleTaskTimeout(task)
-      return task
-    return None
+    task = GetOldestTaskForCapability(executor_capability)
+    if task is None:
+      return None
+    logging.info('Assigning task %s to %s for %s.',
+                 task.key().id_or_name(),
+                 worker,
+                 executor_capability)
+    AssignTaskToWorker(task, worker)
+    logging.info('Assignment successful.')
+    ScheduleTaskTimeout(task)
+    return task
 
   for executor_capability in executor_capabilities:
+    if not executor_capability:
+      continue
     task = db.run_in_transaction(tx, executor_capability)
     if task:
       return task
@@ -281,6 +310,7 @@ def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
 def ScheduleTaskTimeout(task):
   """Schedules a timeout for the given assigned Task.
 
+  Must be called inside of a datastore transaction.
   Called by Assign to enforce Task timeouts.
   """
   timeout = GetTaskTimeout(task)

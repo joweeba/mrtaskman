@@ -324,9 +324,6 @@ class TasksAssignHandler(webapp2.RequestHandler):
 
     response = model_to_dict.ModelToDict(task)
     response['kind'] = 'mrtaskman#task'
-    task_id = int(task.key().id())
-    response['task_complete_url'] = MakeTaskCompleteUrl(task_id)
-
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
 
@@ -393,6 +390,22 @@ class TasksListByNameHandler(webapp2.RequestHandler):
     self.response.out.write('\n')
 
 
+class TasksPeekAtExecutorHandler(webapp2.RequestHandler):
+  def get(self, executor):
+    """Gets first scheduled (unassigned) task for a given executor."""
+    task = tasks.GetOldestTaskForCapability(executor)
+    if task is None:
+      self.response.set_status(404)
+      return
+
+    response = model_to_dict.ModelToDict(task)
+    response['kind'] = 'mrtaskman#task'
+
+    json.dump(response, self.response.out, indent=2)
+    self.response.headers['Content-Type'] = 'application/json'
+    self.response.out.write('\n')
+
+
 app = webapp2.WSGIApplication([
     ('/tasks/([0-9]+)', TasksHandler),
     ('/tasks/([0-9]+)/task_complete_url', TaskCompleteUrlHandler),
@@ -400,4 +413,5 @@ app = webapp2.WSGIApplication([
     ('/tasks/list_by_name', TasksListByNameHandler),
     ('/tasks/schedule', TasksScheduleHandler),
     ('/executors/([a-zA-Z0-9]+)', TasksListByExecutorHandler),
+    ('/executors/([a-zA-Z0-9]+)/peek', TasksPeekAtExecutorHandler),
     ], debug=True)

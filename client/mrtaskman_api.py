@@ -49,8 +49,6 @@ try:
 
     Raises urllib2.HTTPError on non-200 response.
     """
-    logging.info('Making %s call to %s with HEADERS:\n%s\n\nBODY:\n%s',
-                 method, url, headers, body)
     response = urlfetch.fetch(url, payload=body, method=method, headers=headers,
                               deadline=timeout)
     response_body = response.content
@@ -143,6 +141,33 @@ class MrTaskmanApi(object):
         url, method='GET', headers=headers, body=body)
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
+
+  def PeekAtExecutor(self, executor_capability):
+    """Performs an executors.peek on given executor_capability.
+
+    Effectively shows the first unscheduled task for given executor.
+
+    Args:
+      executor_capability: Name of executor capability as str.
+
+    Returns:
+      TaskResult object or None.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(executor_capability, basestring)
+
+    path = '/executors/%s/peek' % executor_capability
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {'Accept': 'application/json'}
+
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
+
 
   def ScheduleTask(self, config):
     """Performs a tasks.schedule on given config object.

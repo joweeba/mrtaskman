@@ -59,13 +59,33 @@ def ListTasksByName(argv):
   try:
     task_name = argv.pop(0)
   except:
-    sys.stderr.write('tasks command requires a string task_name argiment.\n')
+    sys.stderr.write('tasks command requires a string task_name argument.\n')
     return 3
 
   api = mrtaskman_api.MrTaskmanApi()
 
   try:
-    task = api.ListTasksByName(task_name)
+    tasks = api.ListTasksByName(task_name)
+    json.dump(tasks, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
+def Peek(argv):
+  try:
+    executor = argv.pop(0)
+  except:
+    sys.stderr.write('peek command requires a string executor argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    task = api.PeekAtExecutor(executor)
     json.dump(task, sys.stdout, indent=2)
     print ''
     return 0
@@ -393,6 +413,7 @@ COMMANDS:
   tasks {name}\t\tList available tasks with given name.
   stdout {id}\t\tPrints stdout from completed task with given id.
   stderr {id}\t\tPrints stderr from completed task with given id.
+  peek {executor}\tRetrieve first unscheduled task for given executor.
 
   createpackage {manifest}\t Create a new package with given manifest.
   deletepackage {name} {version} Delete package with given name and version.
@@ -415,6 +436,7 @@ COMMANDS = {
   'tasks': ListTasksByName,
   'stdout': Stdout,
   'stderr': Stderr,
+  'peek': Peek,
   'createpackage': CreatePackage,
   'deletepackage': DeletePackage,
   'package': Package,
