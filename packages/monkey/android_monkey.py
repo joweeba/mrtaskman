@@ -100,7 +100,7 @@ def main(argv):
       except Exception, e:
         logging.error('Error while dumping command stderr: %s', str(e))
         stderr_exitcode = -5
-      finally:        
+      finally:
         cmd_stderr.close()
 
       if stdout_exitcode != 0:
