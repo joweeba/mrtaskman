@@ -3,7 +3,7 @@
   "packages": [
     {
       "kind": "mrtaskman#packageref",
-      "name": "MonkeyPackage",
+      "name": "AndroidLaunchPackage",
       "version": 1
     },
     {
@@ -18,7 +18,7 @@
     "requirements": {
       "executor": ["1234"]
     },
-    "command": "./android_monkey.py Crashy.apk",
+    "command": "./android_launch.py Crashy.apk",
     "timeout": "300s"
   }
 }

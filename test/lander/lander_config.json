@@ -3,7 +3,7 @@
   "packages": [
     {
       "kind": "mrtaskman#packageref",
-      "name": "MonkeyPackage",
+      "name": "AndroidMonkeyPackage",
       "version": 1
     },
     {
@@ -16,7 +16,7 @@
   "task": {
     "name": "LunarLanderMonkey",
     "requirements": {
-      "executor": ["macos"]
+      "executor": ["android"]
     },
     "command": "./android_monkey.py LunarLander.apk",
     "timeout": "300s"
