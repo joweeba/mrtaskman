@@ -168,6 +168,79 @@ class MrTaskmanApi(object):
     response_body = response_body.decode('utf-8')
     return json.loads(response_body, 'utf-8')
 
+  def PauseExecutor(self, executor_capability):
+    """Performs an executors.pause on given executor_capability.
+
+    Effectively prevents assignment of unscheduled tasks for given executor.
+
+    Args:
+      executor_capability: Name of executor capability as str.
+
+    Returns:
+      None.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(executor_capability, basestring)
+
+    path = '/executors/%s/pause' % executor_capability
+    url = FLAGS.mrtaskman_address + path
+    body = ''
+    headers = {'Accept': 'application/json'}
+
+    response_body = MakeHttpRequest(
+        url, method='POST', headers=headers, body=body)
+
+  def ResumeExecutor(self, executor_capability):
+    """Performs an executors.resume on given executor_capability.
+
+    Effectively resumes assignment of unscheduled tasks for given executor.
+
+    Args:
+      executor_capability: Name of executor capability as str.
+
+    Returns:
+      None.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(executor_capability, basestring)
+
+    path = '/executors/%s/pause' % executor_capability
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {'Accept': 'application/json'}
+
+    response_body = MakeHttpRequest(
+        url, method='DELETE', headers=headers, body=body)
+
+  def GetExecutorPauseState(self, executor_capability):
+    """Performs an executors.getPauseState on given executor_capability.
+
+    Retrieves the pause state of given executor.
+
+    Args:
+      executor_capability: Name of executor capability as str.
+
+    Returns:
+      mrtaskman#executor_pause_state object.
+
+    Raises:
+      urllib2.HTTPError on non-200 response.
+    """
+    assert isinstance(executor_capability, basestring)
+
+    path = '/executors/%s/pause' % executor_capability
+    url = FLAGS.mrtaskman_address + path
+    body = None
+    headers = {'Accept': 'application/json'}
+
+    response_body = MakeHttpRequest(
+        url, method='GET', headers=headers, body=body)
+    response_body = response_body.decode('utf-8')
+    return json.loads(response_body, 'utf-8')
 
   def ScheduleTask(self, config):
     """Performs a tasks.schedule on given config object.

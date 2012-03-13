@@ -95,6 +95,64 @@ def Peek(argv):
     return e.code
 
 
+def Pause(argv):
+  try:
+    executor = argv.pop(0)
+  except:
+    sys.stderr.write('pause command requires a string executor argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    api.PauseExecutor(executor)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
+def Resume(argv):
+  try:
+    executor = argv.pop(0)
+  except:
+    sys.stderr.write('resume command requires a string executor argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    api.ResumeExecutor(executor)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
+def IsPaused(argv):
+  try:
+    executor = argv.pop(0)
+  except:
+    sys.stderr.write('ispaused command requires a string executor argument.\n')
+    return 3
+
+  api = mrtaskman_api.MrTaskmanApi()
+
+  try:
+    executor_pause_state = api.GetExecutorPauseState(executor)
+    json.dump(executor_pause_state, sys.stdout, indent=2)
+    print ''
+    return 0
+  except urllib2.HTTPError, e:
+    sys.stderr.write('Got %d HTTP response from MrTaskman:\n%s\n' % (
+                     e.code, e.read()))
+    return e.code
+
+
 def TaskCompleteUrl(argv):
   try:
     task_id = int(argv.pop(0))
@@ -413,7 +471,11 @@ COMMANDS:
   tasks {name}\t\tList available tasks with given name.
   stdout {id}\t\tPrints stdout from completed task with given id.
   stderr {id}\t\tPrints stderr from completed task with given id.
+
   peek {executor}\tRetrieve first unscheduled task for given executor.
+  pause {executor}\tPause given executor queue.
+  resume {executor}\tResume given executor queue.
+  ispaused {executor}\tRetrieves pause state of given executor.
 
   createpackage {manifest}\t Create a new package with given manifest.
   deletepackage {name} {version} Delete package with given name and version.
@@ -437,6 +499,9 @@ COMMANDS = {
   'stdout': Stdout,
   'stderr': Stderr,
   'peek': Peek,
+  'pause': Pause,
+  'resume': Resume,
+  'ispaused': IsPaused,
   'createpackage': CreatePackage,
   'deletepackage': DeletePackage,
   'package': Package,

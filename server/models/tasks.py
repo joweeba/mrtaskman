@@ -14,6 +14,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+from google.appengine.api import memcache
 from google.appengine.api import urlfetch
 from google.appengine.api import taskqueue
 from google.appengine.ext import db
@@ -104,6 +105,33 @@ class Task(db.Model):
 
 def MakeParentKey():
   return db.Key.from_path('TaskParent', '0')
+
+
+def MakeExecutorPauseKey(executor):
+  """Returns a db.Key corresponding to given executor."""
+  return db.Key.from_path('ExecutorPause', executor)
+
+
+def PauseExecutor(executor):
+  """Temporarily pauses execution for given executor."""
+  key = str(MakeExecutorPauseKey(executor))
+  memcache.set(key, 'paused')
+
+
+def ResumeExecutor(executor):
+  """Resumes execution for given paused executor.
+
+  Returns 0 on network failure, non-zero otherwise.
+  """
+  key = str(MakeExecutorPauseKey(executor))
+  return memcache.delete(key)
+
+
+def IsExecutorPaused(executor):
+  """Returns True iff executor is paused. False otherwise."""
+  key = str(MakeExecutorPauseKey(executor))
+  paused = memcache.get(key)
+  return bool(memcache.get(key))
 
 
 def Schedule(name, config, scheduled_by, executor_requirements, priority=0):
@@ -223,6 +251,8 @@ def Assign(worker, executor_capabilities):
 
   for executor_capability in executor_capabilities:
     if not executor_capability:
+      continue
+    if IsExecutorPaused(executor_capability):
       continue
     task = db.run_in_transaction(tx, executor_capability)
     if task:

@@ -11,6 +11,15 @@ builtins:
 handlers:
 
 # Tasks.
+- url: /executors/[a-zA-Z0-9]+
+  script: handlers.tasks.app
+- url: /executors/[a-zA-Z0-9]+/deleteall
+  script: models.tasks.app
+  login: admin
+- url: /executors/[a-zA-Z0-9]+/pause
+  script: handlers.tasks.app
+- url: /executors/[a-zA-Z0-9]+/peek
+  script: handlers.tasks.app
 - url: /tasks/[0-9]+
   script: handlers.tasks.app
 - url: /tasks/[0-9]+/task_complete_url
@@ -24,13 +33,6 @@ handlers:
 - url: /tasks/timeout
   script: models.tasks.app
   login: admin
-- url: /executors/[a-zA-Z0-9]+/peek
-  script: handlers.tasks.app
-- url: /executors/[a-zA-Z0-9]+/deleteall
-  script: models.tasks.app
-  login: admin
-- url: /executors/[a-zA-Z0-9]+
-  script: handlers.tasks.app
 - url: /taskresultfiles/.+
   script: handlers.taskresultfiles.app
 

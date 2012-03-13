@@ -406,6 +406,33 @@ class TasksPeekAtExecutorHandler(webapp2.RequestHandler):
     self.response.out.write('\n')
 
 
+class PauseExecutorHandler(webapp2.RequestHandler):
+  def get(self, executor):
+    """Returns pause status of given executor."""
+    paused = tasks.IsExecutorPaused(executor)
+
+    response = {}
+    response['kind'] = 'mrtaskman#executor_pause_state'
+    response['paused'] = paused
+
+    json.dump(response, self.response.out, indent=2)
+    self.response.headers['Content-Type'] = 'application/json'
+    self.response.out.write('\n')
+
+  def post(self, executor):
+    """Idempotently pauses given executor."""
+    tasks.PauseExecutor(executor)
+
+  def delete(self, executor):
+    """Unpauses given executor."""
+    for i in xrange(5):
+      success = tasks.ResumeExecutor(executor)
+      if success:
+        return
+    self.response.set_status(500)
+    self.response.out.write('Could not resume executor due to backend issue.')
+
+
 app = webapp2.WSGIApplication([
     ('/tasks/([0-9]+)', TasksHandler),
     ('/tasks/([0-9]+)/task_complete_url', TaskCompleteUrlHandler),
@@ -413,5 +440,6 @@ app = webapp2.WSGIApplication([
     ('/tasks/list_by_name', TasksListByNameHandler),
     ('/tasks/schedule', TasksScheduleHandler),
     ('/executors/([a-zA-Z0-9]+)', TasksListByExecutorHandler),
+    ('/executors/([a-zA-Z0-9]+)/pause', PauseExecutorHandler),
     ('/executors/([a-zA-Z0-9]+)/peek', TasksPeekAtExecutorHandler),
     ], debug=True)
