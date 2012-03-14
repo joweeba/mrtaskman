@@ -32,5 +32,12 @@ indexes:
   properties:
   - name: executor_requirements
   - name: state
+  - name: completed_time
+
+- kind: Task
+  ancestor: yes
+  properties:
+  - name: executor_requirements
+  - name: state
   - name: priority
     direction: desc

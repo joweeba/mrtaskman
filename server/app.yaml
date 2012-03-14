@@ -51,3 +51,9 @@ handlers:
   script: handlers.events.app
 - url: /events
   script: handlers.events.app
+
+# Dash.
+- url: /dash
+  script: handlers.dash.app
+- url: /dash/[0-9a-zA-Z]+
+  script: handlers.dash.app

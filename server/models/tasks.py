@@ -202,6 +202,24 @@ def GetOldestTaskForCapability(executor_capability):
   return task
 
 
+def GetRecentlyFinishedTasks(executor_capability, limit=5):
+  """Retrieves most recently finished tasks.
+
+  Args:
+    executor_capability: Executor capability to search for as str.
+
+  Returns:
+    Most recently finished Tasks as list of Task.
+  """
+  task = (Task.all()
+              .ancestor(MakeParentKey())
+              .filter('state =', TaskStates.COMPLETE)
+              .filter('executor_requirements =', executor_capability)
+              .order('completed_time')
+              .fetch(limit=limit))
+  return task
+
+
 def AssignTaskToWorker(task, worker):
   """Takes given Task and assigns to given worker.
 

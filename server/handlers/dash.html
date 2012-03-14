@@ -1,0 +1,9 @@
+<html>
+<head><title>Dash</title>
+</head>
+<body>
+{% for device in devices %}
+<iframe src='/dash/{{ device }}' height=400></iframe>
+{% endfor %}
+</body>
+</html>
