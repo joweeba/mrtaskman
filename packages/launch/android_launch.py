@@ -48,6 +48,9 @@ def main(argv):
     class_name = apklib.FindClassName(manifest)
     logging.info('Found class_path: %s', class_path)
 
+    logging.info('Signing .apk...')
+    apklib.SignApk(apk_file_path)
+
     logging.info('Installing .apk...')
     try:
       output = subprocess.check_output(

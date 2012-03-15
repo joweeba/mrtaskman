@@ -159,3 +159,13 @@ def CheckAdbShellExitCode():
   if ret != 0:
     raise subprocess.CalledProcessError(ret, 'adb shell non-zero exit code',
         output)
+
+
+def SignApk(apk_path):
+  """Tries to sign given APK file and swallows all exceptions."""
+  try:
+    RunShellCommand('jarsigner -verbose -storepass android '
+                    '-keystore debug.keystore %s androiddebugkey' % apk_path)
+  except Exception, e:
+    logging.error('Error signing APK.')
+    logging.exception(e)

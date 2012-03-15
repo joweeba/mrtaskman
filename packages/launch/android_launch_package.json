@@ -13,6 +13,14 @@
     },
     {
       "kind": "mrtaskman#form_file",
+      "form_name": "debug.keystore",
+      "file_destination": "debug.keystore",
+      "filename": "debug.keystore",
+      "client_path": "packages/launch/debug.keystore",
+      "file_mode": "755"
+    },
+    {
+      "kind": "mrtaskman#form_file",
       "form_name": "AXMLPrinter2",
       "file_destination": "AXMLPrinter2.jar",
       "filename": "AXMLPrinter2.jar",
