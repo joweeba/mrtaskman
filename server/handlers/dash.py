@@ -56,29 +56,33 @@ class ExecutorDashHandler(webapp2.RequestHandler):
     backlog = tasks.GetByExecutor(executor, limit=5000, keys_only=True)
     oldest = tasks.GetOldestTaskForCapability(executor)
     recently_finished = tasks.GetRecentlyFinishedTasks(executor, 20)
+    current = tasks.GetCurrentTask(executor)
 
     passes = 0
     for finished in recently_finished:
       if finished.outcome == tasks.TaskOutcomes.SUCCESS:
         passes += 1
+      finished.id = finished.key().id()
     pass_rate = 0.0
     if len(recently_finished) > 0:
       pass_rate = 100.0 * float(passes) / float(len(recently_finished))
+
+    if oldest:
+      oldest.id = oldest.key().id()
+    if current:
+      current.id = current.key().id()
 
     args = {
       'executor': executor,
       'pass_rate': pass_rate,
       'backlog': len(backlog),
       'oldest': oldest,
+      'current': current,
       'recently_finished': recently_finished,
     }
-    if oldest:
-      args['oldest_id'] = oldest.key().id()
-      args['oldest_age'] = ((
-          datetime.datetime.now() - oldest.scheduled_time
-          ).total_seconds() / 60.0)
 
-    self.response.out.write(template.render('handlers/executor_dash.html', args))
+    self.response.out.write(
+        template.render('handlers/executor_dash.html', args))
 
 
 app = webapp2.WSGIApplication([

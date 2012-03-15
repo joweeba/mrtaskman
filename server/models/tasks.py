@@ -215,8 +215,25 @@ def GetRecentlyFinishedTasks(executor_capability, limit=5):
               .ancestor(MakeParentKey())
               .filter('state =', TaskStates.COMPLETE)
               .filter('executor_requirements =', executor_capability)
-              .order('completed_time')
+              .order('-completed_time')
               .fetch(limit=limit))
+  return task
+
+
+def GetCurrentTask(executor_capability):
+  """Retrieves currently assigned Task for executor.
+
+  Args:
+    executor_capability: Executor capability to search for as str.
+
+  Returns:
+    Most recently assigned Task.
+  """
+  task = (Task.all()
+              .ancestor(MakeParentKey())
+              .filter('state =', TaskStates.ASSIGNED)
+              .filter('executor_requirements =', executor_capability)
+              .get())
   return task
 
 
