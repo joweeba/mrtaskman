@@ -201,6 +201,10 @@ try:
       logging.error('Unable to invoke adb.')
       logging.exception(e)
       return devices
+    except OSError, e:
+      logging.error('Unable to invoke adb.')
+      logging.exception(e)
+      return devices
 
     lines = output.split('\n')
     for line in lines:
