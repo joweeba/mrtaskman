@@ -24,18 +24,17 @@ from google.appengine.api import namespace_manager
 from google.appengine.api import urlfetch
 from google.appengine.api import users
 from google.appengine.ext import db
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp import util
 
 import logging
 import sets
 import datetime
 import time
+import webapp2
 
-from prodeagle import auth, config, counter_names, appstats_export, logservice_export, memcache_export
-from prodeagle.model import CountersLastHarvest, CountersSavedInBetween
+from third_party.prodeagle import auth, config, counter_names, appstats_export, logservice_export, memcache_export
+from third_party.prodeagle.model import CountersLastHarvest, CountersSavedInBetween
 
-class HarvestHandler(webapp.RequestHandler):
+class HarvestHandler(webapp2.RequestHandler):
 
   def wasDataLostSinceLastHarvest(self, namespace, slot,
                                   reset_test_counters=False):
@@ -199,13 +198,6 @@ class HarvestHandler(webapp.RequestHandler):
   def post(self):
     self.get()
 
-application = webapp.WSGIApplication([
+app = webapp2.WSGIApplication([
   ('/.*', HarvestHandler),
 ], debug=True)
-
-
-def main():
-  util.run_wsgi_app(application)
-
-if __name__ == "__main__":
-  main()

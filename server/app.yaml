@@ -60,4 +60,4 @@ handlers:
 
 # ProdEagle
 - url: /prodeagle/?
-  script: /third_party/prodeagle/harvest.py
+  script: third_party.prodeagle.harvest.app

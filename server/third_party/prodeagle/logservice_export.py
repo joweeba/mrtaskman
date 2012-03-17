@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from google.appengine.api import logservice
-from prodeagle import counter_names, config
+from third_party.prodeagle import counter_names, config
 
 import datetime
 import math

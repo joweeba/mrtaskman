@@ -16,10 +16,10 @@
 
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
-from prodeagle import counter_names
+from third_party.prodeagle import counter_names
 import logging
 
-from prodeagle import config
+from third_party.prodeagle import config
 
 def incr(name, delta=1, save_stats=config.SAVE_PRODEAGLE_STATS):
   if delta:

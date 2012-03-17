@@ -24,8 +24,8 @@ import logging
 import time
 import re
 
-from prodeagle.model import CounterNamesShard
-from prodeagle import config
+from third_party.prodeagle.model import CounterNamesShard
+from third_party.prodeagle import config
 
 class CounterNamesManager(object):
   def __init__(self, namespace=config.NAMESPACE):

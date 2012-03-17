@@ -20,7 +20,7 @@ from google.appengine.api import urlfetch
 from google.appengine.api import users
 from google.appengine.ext import db
 
-from prodeagle import config
+from third_party.prodeagle import config
 
 class AuthKey(db.Model):  
   secret = db.StringProperty()
