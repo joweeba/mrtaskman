@@ -25,9 +25,11 @@ def main(argv):
   FORMAT = '%(asctime)-15s %(message)s'
   logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
+  result_metadata = {}
   try:
     manifest = apklib.ReadAndroidManifest(apk_file_path)
-    apklib.WriteResultMetadata(manifest)
+    result_metadata[u'AndroidManifest.xml'] = manifest.encode('utf-8')
+    apklib.WriteResultMetadata(result_metadata)
     return 0
   finally:
     logging.shutdown()

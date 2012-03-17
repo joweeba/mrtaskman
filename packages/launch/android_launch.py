@@ -7,6 +7,7 @@ __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 import datetime
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
@@ -41,17 +42,15 @@ def main(argv):
   FORMAT = '%(asctime)-15s %(message)s'
   logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
+  result_metadata = {}
   try:
     manifest = apklib.ReadAndroidManifest(apk_file_path)
-    apklib.WriteResultMetadata(manifest)
+    result_metadata[u'AndroidManifest.xml'] = manifest.encode('utf-8')
     class_path = apklib.FindClassPath(manifest)
     class_name = apklib.FindClassName(manifest)
     logging.info('Found class_path: %s', class_path)
 
-    logging.info('Signing .apk...')
-    apklib.SignApk(apk_file_path)
-
-    logging.info('Installing .apk...')
+    logging.info('installing apk...')
     try:
       output = subprocess.check_output(
           ADB_COMMAND + 'install -r %s' % apk_file_path,
@@ -59,7 +58,16 @@ def main(argv):
       apklib.CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb install error %d:\n%s', e.returncode, e.output)
-      ExitWithErrorCode(e.returncode)
+      try:
+        logging.info('Signing .apk...')
+        apklib.SignApk(apk_file_path)
+        output = subprocess.check_output(
+            ADB_COMMAND + 'install -r %s' % apk_file_path,
+            shell=True)
+        apklib.CheckAdbSuccess(output)
+      except subprocess.CalledProcessError, e:
+        logging.error('adb install error %d:\n%s', e.returncode, e.output)
+        ExitWithErrorCode(e.returncode)
 
     try:
       if '.' not in class_name:
@@ -94,13 +102,6 @@ def main(argv):
         execution_time = finished_time - begin_time
         logging.info('execution_time: %s', execution_time)
 
-        # Old.
-        '''
-        subprocess.check_call(LAUNCH_COMMAND % (class_path, class_name),
-                              stdout=cmd_stdout,
-                              stderr=cmd_stderr,
-                              shell=True)
-        '''
         apklib.CheckAdbShellExitCode()
         if ret != 0:
           logging.error('adb command exited with code %s', ret)
@@ -132,6 +133,21 @@ def main(argv):
         stdout_exitcode = -5  # Don't exit yet, allow stderr to be dumped.
       finally:
         cmd_stdout.close()
+
+      try:
+        # Parse execution_time from output of command and write to metadata.
+        cmd_stdout = open(STDOUT_FILENAME, 'r')
+        stdout = cmd_stdout.read()
+        match = re.match(r'.*TotalTime..(\d+).*', stdout, re.S)
+        if match:
+          total_ms = match.group(1)
+          result_metadata['execution_time'] = float(total_ms) / 1000.0
+      except Exception, e:
+        logging.exception(e)
+      finally:
+        cmd_stdout.close()
+
+      apklib.WriteResultMetadata(result_metadata)
 
       try:
         # Inspect and dump to logs the cmd stderr output.

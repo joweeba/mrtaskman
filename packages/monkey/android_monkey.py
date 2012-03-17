@@ -4,6 +4,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import datetime
 import json
 import logging
 import os
@@ -14,7 +15,7 @@ import time
 from tasklib import apklib
 
 ADB_COMMAND = apklib.ADB_COMMAND
-MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 10 --pct-trackball 90 -s 10 %s; echo $? > /data/local/tmp/ret"'
+MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 90 --pct-trackball 10 -s 10 %s; echo $? > /data/local/tmp/ret"'
 
 STDOUT_FILENAME = 'cmd_stdout.log'
 STDERR_FILENAME = 'cmd_stderr.log'
@@ -39,14 +40,12 @@ def main(argv):
   FORMAT = '%(asctime)-15s %(message)s'
   logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
+  result_metadata = {}
   try:
     manifest = apklib.ReadAndroidManifest(apk_file_path)
+    result_metadata[u'AndroidManifest.xml'] = manifest.encode('utf-8')
     class_path = apklib.FindClassPath(manifest)
-    apklib.WriteResultMetadata(manifest)
     logging.info('Found class_path: %s', class_path)
-
-    logging.info('Signing .apk...')
-    apklib.SignApk(apk_file_path)
 
     logging.info('Installing .apk...')
     try:
@@ -56,22 +55,58 @@ def main(argv):
       apklib.CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb install error %d:\n%s', e.returncode, e.output)
-      ExitWithErrorCode(e.returncode)
+      try:
+        logging.info('Signing .apk...')
+        apklib.SignApk(apk_file_path)
+        output = subprocess.check_output(
+            ADB_COMMAND + 'install -r %s' % apk_file_path,
+            shell=True)
+        apklib.CheckAdbSuccess(output)
+      except subprocess.CalledProcessError, e:
+        logging.error('adb install error %d:\n%s', e.returncode, e.output)
+        ExitWithErrorCode(e.returncode)
 
     try:
       logging.info('Running command...')
       cmd_stdout = open(STDOUT_FILENAME, 'w')
       cmd_stderr = open(STDERR_FILENAME, 'w')
+      command = MONKEY_COMMAND % (class_path, ' '.join(argv))
       try:
-        subprocess.check_call(MONKEY_COMMAND % (class_path, ' '.join(argv)),
-                              stdout=cmd_stdout,
-                              stderr=cmd_stderr,
-                              shell=True)
+        timeout = datetime.timedelta(0, 900)  # Give the thing 15 minutes.
+        begin_time = datetime.datetime.now()
+        timeout_time = begin_time + timeout
+        process = subprocess.Popen(args=command,
+                                   stdout=cmd_stdout,
+                                   stderr=cmd_stderr,
+                                   shell=True)
+
+        ret = None
+        while None == ret and (datetime.datetime.now() < timeout_time):
+          time.sleep(0.02)
+          ret = process.poll()
+
+        finished_time = datetime.datetime.now()
+        execution_time = finished_time - begin_time
+        logging.info('execution_time: %s', execution_time)
+
+        if finished_time >= timeout_time and (None == ret):
+          logging.error('command %s timed out.', command)
+          process.terminate()
+          process.wait()
+          ret = 0
+        elif ret == 0:
+          # Only write execution_time if we didn't time out or fail.
+          result_metadata['execution_time'] = execution_time.total_seconds()
+
         apklib.CheckAdbShellExitCode()
+        if ret != 0:
+          logging.error('adb command exited with code %s', ret)
+          ExitWithErrorCode(ret)
       except subprocess.CalledProcessError, e:
         logging.error('Error %d:\n%s', e.returncode, e.output)
         ExitWithErrorCode(e.returncode)
     finally:
+      apklib.WriteResultMetadata(result_metadata)
       cmd_stdout.flush()
       cmd_stdout.close()
       cmd_stderr.flush()

@@ -97,12 +97,9 @@ def GetElementValue(manifest, element_name):
   return manifest[begin:end]
 
 
-def WriteResultMetadata(manifest):
-  result_metadata = {
-    u'AndroidManifest.xml': manifest.encode('utf-8')
-  }
+def WriteResultMetadata(result_metadata):
   outfile = file('result_metadata', 'w')
-  json.dump(result_metadata, outfile)
+  json.dump(result_metadata, outfile, indent=2)
   outfile.close()
 
 
