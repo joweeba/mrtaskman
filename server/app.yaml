@@ -57,3 +57,7 @@ handlers:
   script: handlers.dash.app
 - url: /dash/[0-9a-zA-Z]+
   script: handlers.dash.app
+
+# ProdEagle
+- url: /prodeagle/?
+  script: /third_party/prodeagle/harvest.py
