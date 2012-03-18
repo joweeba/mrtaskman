@@ -36,6 +36,7 @@ from common import parsetime
 
 
 FLAGS = gflags.FLAGS
+gflags.DEFINE_string('log_filename', '', 'Where to log stuff. Required.')
 gflags.DEFINE_string('worker_name', '', 'Unique worker name.')
 gflags.DEFINE_list('worker_capabilities', ['macos', 'android'],
                    'Things this worker can do.')
@@ -351,15 +352,32 @@ def main(argv):
   # Set default socket timeout to 2 hours so that we catch missing timeouts.
   socket.setdefaulttimeout(2 * 60 * 60)
 
+  if not FLAGS.log_filename:
+    sys.stderr.write('Flag --log_filename is required.\n')
+    sys.exit(-9)
+    return
+
+  try:
+    from third_party import portalocker
+    log_stream = file(FLAGS.log_filename, 'a+')
+    portalocker.lock(log_stream, portalocker.LOCK_EX | portalocker.LOCK_NB)
+  except:
+    print 'Count not get exclusive lock.'
+    sys.exit(-10)
+    return
+
   try:
     FORMAT = '%(asctime)-15s %(message)s'
-    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG, stream=log_stream)
 
     macos_worker = MacOsWorker(FLAGS.worker_name)
     # Run forever, executing tasks from the server when available.
     macos_worker.PollAndExecute()
   finally:
     logging.shutdown()
+    log_stream.flush()
+    portalocker.unlock(log_stream)
+    log_stream.close()
 
 
 if __name__ == '__main__':
