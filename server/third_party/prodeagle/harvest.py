@@ -194,10 +194,12 @@ class HarvestHandler(webapp2.RequestHandler):
         logging.info("Deleted the following counters: %s" % ", ".join(result))
       else:
         self.createReport(self.request.get("production_call") == "1")
+    self.response.out.write('')
 
   def post(self):
     self.get()
 
 app = webapp2.WSGIApplication([
-  ('/.*', HarvestHandler),
-], debug=True)
+    ('/.*', HarvestHandler),
+    ], debug=True)
+

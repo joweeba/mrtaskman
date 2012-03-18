@@ -26,6 +26,7 @@ import logging
 import urllib
 import webapp2
 
+from third_party.prodeagle import counter
 from util import db_properties
 from util import parsetime
 
@@ -145,6 +146,7 @@ def Schedule(name, config, scheduled_by, executor_requirements, priority=0):
               priority=priority,
               webhook=webhook)
   db.put(task)
+  counter.incr('Tasks.Scheduled')
   return task
 
 
@@ -171,6 +173,7 @@ def DeleteById(task_id):
   if task is None:
     return False
   task.delete()
+  counter.incr('Tasks.Deleted')
   return True
 
 
@@ -282,6 +285,8 @@ def Assign(worker, executor_capabilities):
     AssignTaskToWorker(task, worker)
     logging.info('Assignment successful.')
     ScheduleTaskTimeout(task)
+    counter.incr('Tasks.Assigned')
+    counter.incr('Executors.%s.Assigned' % executor_capability)
     return task
 
   for executor_capability in executor_capabilities:
@@ -303,24 +308,40 @@ def UploadTaskResult(task_id, attempt, exit_code,
                task_id, attempt)
   def tx():
     task = GetById(task_id)
+    counters = counter.Batch()
 
     # Validate that task is in a state to accept results from worker.
     if not task:
       raise TaskNotFoundError()
+    counters.incr('Tasks.Completed')
+    if device_serial_number:
+      counters.incr('Executors.%s.Completed' % device_serial_number)
     if task.attempts != attempt:
       logging.info('Attempts: %d, attempt: %d', task.attempts, attempt)
+      counter.incr('Tasks.Completed.TimedOut')
+      if device_serial_number:
+        counter.incr('Executors.%s.TimedOut' % device_serial_number)
       raise TaskTimedOutError()
     # Here we allow a timed out task to publish results if it hasn't
     # been scheduled to another worker yet.
     if task.state not in [TaskStates.ASSIGNED, TaskStates.SCHEDULED]:
       logging.info('task.state: %s', task.state)
+      counter.incr('Tasks.Completed.TimedOut')
+      if device_serial_number:
+        counter.incr('Executors.%s.TimedOut' % device_serial_number)
       raise TaskTimedOutError()
 
     # Mark task as complete and place results.
     task.completed_time = datetime.datetime.now()
     if exit_code == 0:
+      counters.incr('Tasks.Completed.Success')
+      if device_serial_number:
+        counters.incr('Executors.%s.Success' % device_serial_number)
       task.outcome = TaskOutcomes.SUCCESS
     else:
+      counters.incr('Tasks.Completed.Failed')
+      if device_serial_number:
+        counters.incr('Executors.%s.Failed' % device_serial_number)
       task.outcome = TaskOutcomes.FAILED
     task.state = TaskStates.COMPLETE
 
@@ -337,10 +358,11 @@ def UploadTaskResult(task_id, attempt, exit_code,
 
     task.result = task_result
     db.put(task)
-    return task
-  task = db.run_in_transaction(tx)
-
+    return (task, counters)
+  (task, counters) = db.run_in_transaction(tx)
   logging.info('Insert succeeded.')
+  counters.commit()
+
   config = json.loads(task.config)
   try:
     webhook = config['task']['webhook']
@@ -351,6 +373,7 @@ def UploadTaskResult(task_id, attempt, exit_code,
             'application/x-www-form-urlencoded;encoding=utf-8'})
     logging.info('Webhook invoked with status %d: %s.', fetched.status_code,
         fetched.content)
+    counter.incr('Tasks.WebhookInvoked')
   except Exception, e:
     logging.exception(e)
     logging.info('No webhook, or error invoking webhook.')

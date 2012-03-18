@@ -86,8 +86,8 @@ def addUser(handler, email):
     type = "administrator"
     if handler.request.get("viewer"):
       type = "viewer"
-    handler.redirect("%s/auth/?site=%s&auth=%s&%s=%s" %
+    handler.redirect(str("%s/auth/?site=%s&auth=%s&%s=%s" %
                   (config.SECURE_HOST,
                    handler.request.headers["Host"],
-                   secret, type, email))
+                   secret, type, email)))
   

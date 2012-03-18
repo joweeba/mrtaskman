@@ -21,6 +21,8 @@ from google.appengine.ext.blobstore import blobstore
 import logging
 import webapp2
 
+from third_party.prodeagle import counter
+
 
 class Error(Exception):
   pass
@@ -68,6 +70,7 @@ def CreatePackage(name, version, created_by, files, urlfiles):
   def tx():
     package = db.get(package_key)
     if package is not None:
+      counter.incr('Packages.DuplicatePackageError')
       raise DuplicatePackageError()
 
     package = Package(key=package_key,
@@ -95,7 +98,10 @@ def CreatePackage(name, version, created_by, files, urlfiles):
 
     db.put(package_files)
     return package
-  return db.run_in_transaction(tx)
+  package = db.run_in_transaction(tx)
+  if package:
+    counter.incr('Packages.Created')
+  return package
 
 
 def GetPackageByNameAndVersion(name, version):

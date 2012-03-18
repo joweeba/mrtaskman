@@ -26,6 +26,7 @@ import webapp2
 
 from models import tasks
 from util import model_to_dict
+from third_party.prodeagle import counter
 
 
 class TasksScheduleHandler(webapp2.RequestHandler):
@@ -33,6 +34,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
 
   def post(self):
     """TODO(jeff.carollo): Specify request and response format."""
+    counter.incr('Tasks.Schedule')
     content_type = self.request.headers['Content-Type']
     if 'application/json' not in content_type:
       logging.info('Content-Type: %s', content_type)
@@ -42,6 +44,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
 
     body = self.request.body.decode('utf-8')
     if body is None:
+      counter.incr('Tasks.Schedule.400')
       self.response.out.write('Config is required in message body\n')
       self.response.set_status(400)
       return
@@ -54,6 +57,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
       if not parsed_config:
         raise Exception('json could not parse config.')
     except Exception, e:
+      counter.incr('Tasks.Schedule.400')
       self.response.out.write('Failure parsing config.\n')
       self.response.out.write(e)
       self.response.out.write('\n')
@@ -63,6 +67,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
     try:
       name = parsed_config['task']['name']
     except KeyError, e:
+      counter.incr('Tasks.Schedule.400')
       self.response.out.write('Failure parsing config.\n')
       self.response.out.write('task.name is required\n')
       self.response.set_status(400)
@@ -75,11 +80,13 @@ class TasksScheduleHandler(webapp2.RequestHandler):
       for executor_req in executor_requirements:
         assert isinstance(executor_req, basestring)
     except KeyError, e:
+      counter.incr('Tasks.Schedule.400')
       self.response.out.write('Failure parsing config.\n')
       self.response.out.write('task.requirements.executor is required\n')
       self.response.set_status(400)
       return
     except AssertionError, e:
+      counter.incr('Tasks.Schedule.400')
       self.response.out.write('Failure parsing config.\n')
       self.response.out.write(
           'task.requirements.executor must be a non-empty list of strings.\n')
@@ -91,6 +98,7 @@ class TasksScheduleHandler(webapp2.RequestHandler):
       logging.info('priority is %s', priority)
       priority = int(priority)
     except ValueError:
+      counter.incr('Tasks.Schedule.400')
       self.response.out.write('task.priority must be an integer\n')
       self.response.set_status(400)
       return
@@ -117,16 +125,19 @@ class TasksScheduleHandler(webapp2.RequestHandler):
     response['kind'] = 'mrtaskman#taskid'
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
+    counter.incr('Tasks.Schedule.200')
 
 
 class TasksHandler(webapp2.RequestHandler):
   def get(self, task_id):
     """Retrieves a single task given by task_id."""
+    counter.incr('Tasks.Get')
     # TODO(jeff.carollo): Specify request and response format."""
     task_id = int(task_id)
     task = tasks.GetById(task_id)
 
     if task is None:
+      counter.incr('Tasks.Get.404')
       self.error(404)
       return
 
@@ -136,18 +147,23 @@ class TasksHandler(webapp2.RequestHandler):
     response['kind'] = 'mrtaskman#task'
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
+    counter.incr('Tasks.Get.200')
 
   def delete(self, task_id):
     """Removes a single task given by task_id."""
+    counter.incr('Tasks.Delete')
     task_id = int(task_id)
     success = tasks.DeleteById(task_id)
     if not success:
+      counter.incr('Tasks.Delete.404')
       self.error(404)
       return
     # 200 OK.
+    counter.incr('Tasks.Delete.200')
 
   def post(self, task_id):
     """Uploads results of a task, including STDOUT and STDERR."""
+    counter.incr('Tasks.Update')
     logging.info('Request: %s', self.request.body)
     task_id = int(task_id)
 
@@ -164,6 +180,7 @@ class TasksHandler(webapp2.RequestHandler):
         logging.info(e)
         task_result = None
     if not task_result:
+      counter.incr('Tasks.Update.400')
       self.DeleteBlobs(blob_infos)
       self.response.out.write('Field "task_result" is required.\n')
       self.response.set_status(400)
@@ -178,6 +195,7 @@ class TasksHandler(webapp2.RequestHandler):
       assert isinstance(attempt, int)
       assert isinstance(exit_code, int)
     except KeyError, AssertionError:
+      counter.incr('Tasks.Update.400')
       self.DeleteBlobs(blob_infos)
       self.response.out.write(
           'task_result must contain integers "attempt" and "exit_code".')
@@ -189,12 +207,13 @@ class TasksHandler(webapp2.RequestHandler):
       try:
         result_metadata = json.dumps(result_metadata, indent=2)
       except:
+        counter.incr('Tasks.Update.400')
         self.DeleteBlobs(blob_infos)
         self.response.out.write(
             'result_metadata must be JSON serializable.')
         self.response.set_status(400)
         return
-    
+
     # Get optional execution_time.
     execution_time = task_result.get('execution_time', None)
 
@@ -213,16 +232,19 @@ class TasksHandler(webapp2.RequestHandler):
                              stdout_download_url, stderr_download_url,
                              device_serial_number, result_metadata)
     except tasks.TaskNotFoundError:
+      counter.incr('Tasks.Update.404')
       self.DeleteBlobs(blob_infos)
       self.response.out.write('Task %d does not exist.' % task_id)
       self.response.set_status(404)
       return
     except tasks.TaskTimedOutError:
+      counter.incr('Tasks.Update.400')
       self.DeleteBlobs(blob_infos)
       self.response.out.write('Response for task %d timed out' % task_id)
       self.response.set_status(400)
       return
-    
+
+    counter.incr('Tasks.Update.200')
     # 200 OK.
 
   def DeleteBlobs(self, blob_infos):
@@ -263,7 +285,7 @@ class TasksHandler(webapp2.RequestHandler):
     for (field_name, field_storage) in self.request.POST.items():
       if isinstance(field_storage, cgi.FieldStorage):
         blobs[field_name] = blobstore.parse_blob_info(field_storage)
-    return blobs 
+    return blobs
 
 
 def MakeTaskCompleteUrl(task_id):
@@ -276,8 +298,10 @@ class TasksAssignHandler(webapp2.RequestHandler):
 
   def put(self):
     # TODO(jeff.carollo): Specify request and response format."""
+    counter.incr('Tasks.Assign')
     body = self.request.body.decode('utf-8')
     if body is None:
+      counter.incr('Tasks.Assign.400')
       self.response.out.write('AssignRequest is required in message body\n')
       self.response.set_status(400)
       return
@@ -290,6 +314,7 @@ class TasksAssignHandler(webapp2.RequestHandler):
       if not parsed_request:
         raise Exception('json could not parse AssignRequest.')
     except Exception, e:
+      counter.incr('Tasks.Assign.400')
       self.response.out.write('Failure parsing AssignRequest.\n')
       self.response.out.write(e)
       self.response.out.write('\n')
@@ -300,6 +325,7 @@ class TasksAssignHandler(webapp2.RequestHandler):
     try:
       worker = parsed_request['worker']
     except KeyError, e:
+      counter.incr('Tasks.Assign.400')
       self.response.out.write('AssignRequest.worker is required.\n')
       self.response.out.write(e)
       self.response.out.write('\n')
@@ -309,6 +335,7 @@ class TasksAssignHandler(webapp2.RequestHandler):
     try:
       executor_capabilities = parsed_request['capabilities']['executor']
     except KeyError, e:
+      counter.incr('Tasks.Assign.400')
       self.response.out.write(
           'AssignRequest.capabilities.executor is required.\n')
       self.response.out.write(e)
@@ -326,14 +353,17 @@ class TasksAssignHandler(webapp2.RequestHandler):
     response['kind'] = 'mrtaskman#task'
     json.dump(response, self.response.out, indent=2)
     self.response.out.write('\n')
+    counter.incr('Tasks.Assign.200')
 
 
 class TaskCompleteUrlHandler(webapp2.RequestHandler):
   """In case our task complete URL expires."""
   def get(self, task_id):
+    counter.incr('Tasks.GetTaskCompleteUrl')
     try:
       task_id = int(task_id)
     except:
+      counter.incr('Tasks.GetTaskCompleteUrl.400')
       self.response.set_status(400)
       self.response.out.write('task_id must be an integer.')
       return
@@ -345,6 +375,7 @@ class TaskCompleteUrlHandler(webapp2.RequestHandler):
     json.dump(response, self.response.out, indent=2)
     self.response.headers['Content-Type'] = 'application/json'
     self.response.out.write('\n')
+    counter.incr('Tasks.GetTaskCompleteUrl.200')
 
 
 class TasksListByExecutorHandler(webapp2.RequestHandler):
