@@ -50,7 +50,7 @@ def main(argv):
     tried_once = True
     logging.info('Installing .apk...')
     command = ADB_COMMAND + 'install -r %s' % apk_file_path,
-    while tried_once:
+    while True:
       try:
         timeout = datetime.timedelta(0, 900)  # Give the thing 15 minutes.
         begin_time = datetime.datetime.now()
@@ -91,12 +91,14 @@ def main(argv):
           apklib.SignApk(apk_file_path)
           continue
         ExitWithErrorCode(e.returncode)
+        break
 
     logging.info('Uninstalling .apk...')
     try:
       output = subprocess.check_output(
           ADB_COMMAND + 'uninstall %s' % class_path,
           shell=True)
+      print output
       apklib.CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
