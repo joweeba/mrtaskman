@@ -343,6 +343,11 @@ class TasksAssignHandler(webapp2.RequestHandler):
       self.response.set_status(400)
       return
 
+    counters = counter.Batch()
+    for executor_name in executor_capabilities:
+      counters.incr('Executors.%s.Assign')
+    counters.commit()
+
     task = tasks.Assign(worker, executor_capabilities)
 
     self.response.headers['Content-Type'] = 'application/json'
