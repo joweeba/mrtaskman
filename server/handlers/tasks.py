@@ -345,7 +345,7 @@ class TasksAssignHandler(webapp2.RequestHandler):
 
     counters = counter.Batch()
     for executor_name in executor_capabilities:
-      counters.incr('Executors.%s.Assign')
+      counters.incr('Executors.%s.Assign' % executor_name)
     counters.commit()
 
     task = tasks.Assign(worker, executor_capabilities)
