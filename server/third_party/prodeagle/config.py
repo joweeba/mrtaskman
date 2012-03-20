@@ -22,7 +22,7 @@ NAMESPACE = "prodeagle"
 
 # Boolean
 # If True, ProdEagle will export the overhead of datastore accesses it added.
-SAVE_PRODEAGLE_STATS = False
+SAVE_PRODEAGLE_STATS = True
 
 # String
 # The relative url to the harvest.py handler
@@ -32,7 +32,7 @@ PRODEAGLE_HARVEST_URL = "/prodeagle/"
 
 # Boolean
 # If True then ProdEagle will export data from AppStats.
-APPSTATS_ENABLE = False
+APPSTATS_ENABLE = True
 
 # List[Integers]
 # Here is an exmaple with APPSTATS_PERCENTILE = [90].
@@ -43,19 +43,19 @@ APPSTATS_PERCENTILES = []
 # Boolean
 # If True then ProdEagle exports separate AppStat results for
 # POST and GET requests.
-APPSTATS_DIFFERENTIATE_BETWEEN_POST_AND_GET = False
+APPSTATS_DIFFERENTIATE_BETWEEN_POST_AND_GET = True
 
 # Boolean or regexp String
 # If not False then ProdEagle will export detailed AppStat results for all
 # requests that have a url that match the regexp.
-APPSTATS_PER_REQUESTS = False
+APPSTATS_PER_REQUESTS = '/tasks/.*'
 
 # ----------------------- ErrorLog export Configuration -----------------------
 
 # Boolean
 # If True then ProdEagle exports the http response codes of the Application
 # logs with minimum severity "Error"
-ERROR_LOG_EXPORT_ENABLE = False
+ERROR_LOG_EXPORT_ENABLE = True
 
 # Int
 # The maximum amount of entries in the ErrorLog that should be fetched.
@@ -63,7 +63,7 @@ ERROR_LOG_EXPORT_AMOUNT = 100
 
 # False or regexp String
 # ProdEagle will export export urls of log entries that match the regexp.
-# If the value is False, ProdEagle will not export any URLs. 
+# If the value is False, ProdEagle will not export any URLs.
 ERROR_LOG_EXPORT_URL = ".*"
 
 #--------------------------- Log Export Configuration -------------------------
@@ -81,7 +81,7 @@ LOG_EXPORT_AMOUNT = 500
 
 # False or regexp String
 # ProdEagle will export export urls of log entries that match the regexp.
-# If the value is False, ProdEagle will not export any URLs. 
+# If the value is False, ProdEagle will not export any URLs.
 LOG_EXPORT_URL = False
 
 #------------------------- Memcache Export Configuration ----------------------
@@ -101,7 +101,7 @@ SAVE_IN_BETWEEN = 0
 
 # Integer
 # How many seconds we should look back in time in case the ProdEagle export
-# didn't happen for a long time. 
+# didn't happen for a long time.
 MAX_LOOK_BACK = 3600
 
 # Integer
