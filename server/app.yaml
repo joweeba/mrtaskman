@@ -24,6 +24,9 @@ handlers:
   script: handlers.tasks.app
 - url: /tasks/[0-9]+/task_complete_url
   script: handlers.tasks.app
+- url: /tasks/[0-9]+/invoke_webhook
+  script: models.tasks.app
+  login: admin
 - url: /tasks/assign
   script: handlers.tasks.app
 - url: /tasks/list_by_name

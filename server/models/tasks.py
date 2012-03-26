@@ -358,14 +358,28 @@ def UploadTaskResult(task_id, attempt, exit_code,
 
     task.result = task_result
     db.put(task)
+
+    taskqueue.add(url='/tasks/%d/invoke_webhook' % task.key().id(),
+                  transactional=True)
     return (task, counters)
   (task, counters) = db.run_in_transaction(tx)
   logging.info('Insert succeeded.')
   counters.commit()
 
-  config = json.loads(task.config)
-  try:
-    webhook = config['task']['webhook']
+
+class InvokeWebhookHandler(webapp2.RequestHandler):
+  def post(self, task_id):
+    task = GetById(int(task_id))
+    if not task:
+      return
+
+    config = json.loads(task.config)
+    try:
+      webhook = config['task']['webhook']
+    except Exception, e:
+      logging.exception(e)
+      logging.info('No webhook, or error invoking webhook.')
+
     logging.info('invoking webhook: %s', webhook)
     payload = urllib.urlencode({'task_id': task_id}).encode('utf-8')
     fetched = urlfetch.fetch(url=webhook, method='POST', payload=payload,
@@ -373,10 +387,9 @@ def UploadTaskResult(task_id, attempt, exit_code,
             'application/x-www-form-urlencoded;encoding=utf-8'})
     logging.info('Webhook invoked with status %d: %s.', fetched.status_code,
         fetched.content)
-    counter.incr('Tasks.WebhookInvoked')
-  except Exception, e:
-    logging.exception(e)
-    logging.info('No webhook, or error invoking webhook.')
+
+    self.response.set_status(fetched.status_code)
+    counter.incr('Tasks.WebhookInvoked%s' % fetched.status_code)
 
 
 def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
@@ -392,7 +405,8 @@ def GetTaskTimeout(task, default=datetime.timedelta(minutes=15)):
   timeout_str = parsed_config['task'].get('timeout', None)
   if not timeout_str:
     return default
-  return parsetime.ParseTimeDelta(timeout_str) + datetime.timedelta(minutes=3)
+  return (parsetime.ParseTimeDelta(timeout_str) +
+          datetime.timedelta(minutes=3))
 
 
 def ScheduleTaskTimeout(task):
@@ -468,4 +482,5 @@ class DeleteAllByExecutorHandler(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
     ('/tasks/timeout', TaskTimeoutHandler),
     ('/executors/([a-zA-Z0-9]+)/deleteall', DeleteAllByExecutorHandler),
+    ('/tasks/([0-9]+)/invoke_webhook', InvokeWebhookHandler),
     ], debug=True)
