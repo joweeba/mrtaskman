@@ -102,7 +102,7 @@ def main(argv):
       apklib.CheckAdbSuccess(output)
     except subprocess.CalledProcessError, e:
       logging.error('adb uninstall error %d:\n%s', e.returncode, e.output)
-      ExitWithErrorCode(e.returncode)
+      # Don't fail because uninstall didn't work.
 
     logging.info('Install work done successfully.')
     return 0
