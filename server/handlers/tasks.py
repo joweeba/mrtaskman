@@ -226,11 +226,15 @@ class TasksHandler(webapp2.RequestHandler):
     # Get optional device_serial_number.
     device_serial_number = task_result.get('device_serial_number', None)
 
+    # Get optional worker_log.
+    worker_log = task_result.get('worker_log', None)
+
     try:
       tasks.UploadTaskResult(task_id, attempt, exit_code,
                              execution_time, stdout, stderr,
                              stdout_download_url, stderr_download_url,
-                             device_serial_number, result_metadata)
+                             device_serial_number, result_metadata,
+                             worker_log)
     except tasks.TaskNotFoundError:
       counter.incr('Tasks.Update.404')
       self.DeleteBlobs(blob_infos)

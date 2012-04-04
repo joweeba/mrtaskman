@@ -66,6 +66,7 @@ class TaskResult(db.Model):
   # Should be populated if task execution involved a device.
   device_serial_number = db.StringProperty(required=False)
   result_metadata = db.TextProperty(required=False)
+  worker_log = db.TextProperty(required=False)
 
 
 class Task(db.Model):
@@ -303,7 +304,7 @@ def Assign(worker, executor_capabilities):
 def UploadTaskResult(task_id, attempt, exit_code,
                      execution_time, stdout, stderr,
                      stdout_download_url, stderr_download_url,
-                     device_serial_number, result_metadata):
+                     device_serial_number, result_metadata, worker_log):
   logging.info('Trying to upload result for task %d attempt %d',
                task_id, attempt)
   def tx():
@@ -353,7 +354,8 @@ def UploadTaskResult(task_id, attempt, exit_code,
                              stdout_download_url=stdout_download_url,
                              stderr_download_url=stderr_download_url,
                              device_serial_number=device_serial_number,
-                             result_metadata=result_metadata)
+                             result_metadata=result_metadata,
+                             worker_log=worker_log)
     task_result = db.put(task_result)
 
     task.result = task_result
@@ -379,6 +381,7 @@ class InvokeWebhookHandler(webapp2.RequestHandler):
     except Exception, e:
       logging.exception(e)
       logging.info('No webhook, or error invoking webhook.')
+      return
 
     logging.info('invoking webhook: %s', webhook)
     payload = urllib.urlencode({'task_id': task_id}).encode('utf-8')

@@ -15,6 +15,7 @@
 
 __author__ = 'jeff.carollo@gmail.com (Jeff Carollo)'
 
+import cStringIO
 import datetime
 import httplib
 import json
@@ -33,6 +34,7 @@ from client import package_installer
 from common import device_info
 from common import http_file_upload
 from common import parsetime
+from common import split_stream
 
 
 FLAGS = gflags.FLAGS
@@ -57,9 +59,10 @@ def GetHostname():
 class MacOsWorker(object):
   """Executes macos tasks."""
 
-  def __init__(self, worker_name):
-    self.api_ = mrtaskman_api.MrTaskmanApi()
+  def __init__(self, worker_name, log_stream):
     self.worker_name_ = worker_name
+    self.log_stream_ = log_stream
+    self.api_ = mrtaskman_api.MrTaskmanApi()
     self.hostname_ = GetHostname()
     self.capabilities_ = {'executor': self.GetCapabilities()}
     self.executors_ = {}
@@ -167,35 +170,48 @@ class MacOsWorker(object):
         logging.info('Caught CTRL+C. Exiting.')
         return
 
-      logging.info('Got a task:\n%s\n', json.dumps(task, 'utf-8', indent=2))
+      task_stream = cStringIO.StringIO()
+      task_logs = None
+      self.log_stream_.AddStream(task_stream)
+      try:
+        logging.info('Got a task:\n%s\n', json.dumps(task, 'utf-8', indent=2))
 
-      config = task['config']
-      task_id = int(task['id'])
-      attempt = task['attempts']
+        config = task['config']
+        task_id = int(task['id'])
+        attempt = task['attempts']
 
-      # Figure out which of our executors we can use.
-      executor = None
-      allowed_executors = config['task']['requirements']['executor']
-      for allowed_executor in allowed_executors:
+        # Figure out which of our executors we can use.
+        executor = None
+        allowed_executors = config['task']['requirements']['executor']
+        for allowed_executor in allowed_executors:
+          try:
+            executor = self.executors_[allowed_executor]
+          except KeyError:
+            pass
+          if executor is not None:
+            break
+
+        if executor is None:
+          # TODO: Send error response to server.
+          # This is probably our fault - we said we could do something
+          # that we actually couldn't do.
+          logging.error('No matching executor from %s', allowed_executors)
+          raise Exception('No allowed executors matched our executors_:\n' +
+                          '%s\nvs.%s\n' % (allowed_executors, self.executors_))
+
         try:
-          executor = self.executors_[allowed_executor]
-        except KeyError:
-          pass
-        if executor is not None:
-          break
-
-      if executor is None:
-        # TODO: Send error response to server.
-        # This is probably our fault - we said we could do something
-        # that we actually couldn't do.
-        logging.error('No matching executor from %s', allowed_executors)
-        raise Exception('No allowed executors matched our executors_:\n' +
-                        '%s\nvs.%s\n' % (allowed_executors, self.executors_))
+          # We've got a valid executor, so use it.
+          (results, stdout, stderr) = executor(task_id, attempt, task, config)
+        except MrTaskmanUnrecoverableHttpError:
+          logging.error(
+              'Unrecoverable MrTaskman HTTP error. Aborting task %d.', task_id)
+      finally:
+        self.log_stream_.RemoveStream(task_stream)
+        task_logs = task_stream.getvalue().decode('utf-8')
+        task_stream.close()
 
       try:
-        # We've got a valid executor, so use it.
-        (results, stdout, stderr) = executor(task_id, attempt, task, config)
-
+        results['worker_log'] = task_logs.encode('utf-8')
         self.SendResponse(task_id,
                           stdout,
                           stderr,
@@ -359,8 +375,8 @@ def main(argv):
 
   try:
     from third_party import portalocker
-    log_stream = file(FLAGS.log_filename, 'a+')
-    portalocker.lock(log_stream, portalocker.LOCK_EX | portalocker.LOCK_NB)
+    log_file = file(FLAGS.log_filename, 'a+')
+    portalocker.lock(log_file, portalocker.LOCK_EX | portalocker.LOCK_NB)
   except:
     print 'Count not get exclusive lock.'
     sys.exit(-10)
@@ -368,16 +384,18 @@ def main(argv):
 
   try:
     FORMAT = '%(asctime)-15s %(message)s'
-    logging.basicConfig(format=FORMAT, level=logging.DEBUG, stream=log_stream)
+    log_stream = split_stream.SplitStream(sys.stdout, log_file)
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG,
+                        stream=log_stream)
 
-    macos_worker = MacOsWorker(FLAGS.worker_name)
+    macos_worker = MacOsWorker(FLAGS.worker_name, log_stream=log_stream)
     # Run forever, executing tasks from the server when available.
     macos_worker.PollAndExecute()
   finally:
     logging.shutdown()
-    log_stream.flush()
-    portalocker.unlock(log_stream)
-    log_stream.close()
+    log_file.flush()
+    portalocker.unlock(log_file)
+    log_file.close()
 
 
 if __name__ == '__main__':
