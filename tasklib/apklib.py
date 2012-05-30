@@ -48,7 +48,7 @@ def ReadAndroidManifest(apk_file_path):
     output = subprocess.check_output(
         'java -jar AXMLPrinter2.jar %s' % android_manifest_path,
         shell=True)
-    return output.decode('utf-8')
+    return output.decode('utf-8', 'ignore')
   except subprocess.CalledProcessError, e:
     logging.error('AXMLPrinter2 error %d:\n%s', e.returncode, e.output)
     sys.exit(e.returncode)
