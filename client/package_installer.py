@@ -74,7 +74,6 @@ def DownloadFileWithTimeout(url, destination, timeout=30*60):
       if not buffer:
         break
       localfile.write(buffer)
-
   finally:
     localfile.close()
 
