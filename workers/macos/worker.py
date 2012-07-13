@@ -205,6 +205,7 @@ class MacOsWorker(object):
         except MrTaskmanUnrecoverableHttpError:
           logging.error(
               'Unrecoverable MrTaskman HTTP error. Aborting task %d.', task_id)
+          continue
       finally:
         self.log_stream_.RemoveStream(task_stream)
         task_logs = task_stream.getvalue().decode('utf-8')
