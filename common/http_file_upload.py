@@ -46,7 +46,7 @@ def EncodeMultipartHttpFormData(headers, form_data, file_data):
     form_data: List of {'name': name, 'data': data} pairs.
     file_data: List of {'name': name, 'filename': filename, 'data': data}
                or {'name': name, 'filename': filename, 'filepath': filepath}.
-  
+
   Returns:
     Tuple of (Encoded request body as str, and modified headers as str).
   """
