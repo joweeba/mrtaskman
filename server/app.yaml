@@ -1,8 +1,8 @@
 application: mrtaskman
-version: 2
+version: 3
 runtime: python27
 api_version: 1
-threadsafe: true
+threadsafe: false
 
 builtins:
 - appstats: on
@@ -59,7 +59,7 @@ handlers:
 # Dash.
 - url: /dash
   script: handlers.dash.app
-- url: /dash/[0-9a-zA-Z]+
+- url: /dash/.+
   script: handlers.dash.app
 
 # ProdEagle
@@ -69,6 +69,9 @@ handlers:
 # MapReduce
 - url: /mapreduce(/.*)?
   script: mapreduce/main.py
+  login: admin
+- url: /index
+  script: index.index_handlers.app
   login: admin
 
 # Admin Console.
