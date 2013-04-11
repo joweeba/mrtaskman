@@ -3,7 +3,7 @@
   "packages": [
     {
       "kind": "mrtaskman#packageref",
-      "name": "MonkeyPackage",
+      "name": "AndroidMonkeyPackage",
       "version": 1
     },
     {
