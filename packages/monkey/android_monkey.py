@@ -15,7 +15,7 @@ import time
 from tasklib import apklib
 
 ADB_COMMAND = apklib.ADB_COMMAND
-MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --kill-process-after-error -v 5000 --pct-touch 90 --pct-trackball 10 -s 10 %s; echo $? > /data/local/tmp/ret"'
+MONKEY_COMMAND = ADB_COMMAND + 'shell "/system/bin/monkey -p %s --ignore-timeouts --kill-process-after-error -v 5000 --pct-touch 90 --pct-trackball 10 -s 10 %s; echo $? > /data/local/tmp/ret"'
 
 STDOUT_FILENAME = 'cmd_stdout.log'
 STDERR_FILENAME = 'cmd_stderr.log'
