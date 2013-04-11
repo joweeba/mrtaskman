@@ -31,6 +31,7 @@ import urllib2
 import gflags
 from client import mrtaskman_api
 from client import package_installer
+from client import package_cache
 from common import device_info
 from common import http_file_upload
 from common import parsetime
@@ -42,6 +43,20 @@ gflags.DEFINE_string('log_filename', '', 'Where to log stuff. Required.')
 gflags.DEFINE_string('worker_name', '', 'Unique worker name.')
 gflags.DEFINE_list('worker_capabilities', ['macos', 'android'],
                    'Things this worker can do.')
+
+# Package cache flags.
+gflags.DEFINE_boolean('use_cache', True, 'Whether or not to use package cache.')
+gflags.DEFINE_string('cache_path',
+                     '/usr/local/worker_cache',
+                     'Where to cache packages.')
+gflags.DEFINE_integer('min_duration_seconds', 60,
+                      'Minimum time to cache something.')
+gflags.DEFINE_integer('max_cache_size_bytes', 2 * 1024 * 1024 * 1024,
+                      'Maximum size of the cache in bytes.')
+gflags.DEFINE_float('low_watermark_percentage', 0.6,
+                    'When cleaning up, keeps at least this much cache.')
+gflags.DEFINE_float('high_watermark_percentage', 0.8,
+                    'When cleaning up, deletes to below this line.')
 
 
 class TaskError(Exception):
@@ -68,6 +83,14 @@ class MacOsWorker(object):
     self.executors_ = {}
     for capability in self.capabilities_['executor']:
       self.executors_[capability] = self.ExecuteTask
+    self.use_cache_ = FLAGS.use_cache
+    if self.use_cache_:
+      self.package_cache_ = package_cache.PackageCache(
+          FLAGS.min_duration_seconds,
+          FLAGS.max_cache_size_bytes,
+          FLAGS.cache_path,
+          FLAGS.low_watermark_percentage,
+          FLAGS.high_watermark_percentage)
 
   def GetCapabilities(self):
     capabilities = device_info.GetCapabilities()
@@ -330,9 +353,15 @@ class MacOsWorker(object):
       attempts = 0
       while True:
         try:
-          package_installer.DownloadAndInstallPackage(
-              package['name'], package['version'],
-              tmpdir.GetTmpDir())
+          # TODO(jeff.carollo): Put package cache code here.
+          if self.use_cache_:
+            self.package_cache_.CopyToDirectory(
+                package, tmpdir.GetTmpDir(),
+                package_installer.DownloadAndInstallPackage)
+          else:
+            package_installer.DownloadAndInstallPackage(
+                package['name'], package['version'],
+                tmpdir.GetTmpDir())
           break
         except urllib2.HTTPError, e:
           logging.error('Got HTTPError %d trying to grab package %s.%s: %s',
