@@ -407,8 +407,9 @@ def main(argv):
     from third_party import portalocker
     log_file = file(FLAGS.log_filename, 'a+')
     portalocker.lock(log_file, portalocker.LOCK_EX | portalocker.LOCK_NB)
-  except:
-    print 'Count not get exclusive lock.'
+  except Exception, e:
+    logging.exception(e)
+    print 'Could not get exclusive lock.'
     sys.exit(-10)
     return
 
