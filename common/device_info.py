@@ -47,6 +47,15 @@ DEVICE_INFO = {
         'hub': '02',
         'hub_port': 'D'
     },
+    '123456789012': {
+        'device_type': 'phone',
+        'device_name': 'T-Mobile MyTouch 3G',
+        'os_name': 'android',
+        'os_version': '1.6',
+        'provider': 'T-Mobile',
+        'hub': '02',
+        'hub_port': 'D'
+    },
     '3233A90D16A800EC': {
         'device_type': 'phone',
         'device_name': 'Google Nexus S',
@@ -73,7 +82,26 @@ DEVICE_INFO = {
         'hub': '02',
         'hub_port': 'B'
     },
+    '720b50a3': {
+        'device_type': 'tablet',
+        'device_name': 'Samsung Galaxy Tab 8.9',
+        'os_name': 'android',
+        'os_version': '3.2',
+        'provider': 'AT&T',
+        'hub': '02',
+        'hub_port': 'B'
+    },
     'LGOTMSae4105e': {
+        'device_type': 'phone',
+        'device_name': 'LG Nitro HD',
+        'os_name': 'android',
+        'os_version': '2.3.5',
+        'cell_number': '7744208329',
+        'provider': 'AT&T',
+        'hub': '02',
+        'hub_port': 'A'
+    },
+    'LGOTMS1d96ae': {
         'device_type': 'phone',
         'device_name': 'LG Nitro HD',
         'os_name': 'android',
@@ -93,7 +121,27 @@ DEVICE_INFO = {
         'hub': '01',
         'hub_port': 'D'
     },
+    '0146882E0D01A005': {
+        'device_type': 'phone',
+        'device_name': 'Galaxy Nexus',
+        'os_name': 'android',
+        'os_version': '4.0.2',
+        'cell_number': '4255771762',
+        'provider': 'Verizon Wireless',
+        'hub': '01',
+        'hub_port': 'D'
+    },
     'HT16RS015741': {
+        'device_type': 'phone',
+        'device_name': 'HTC Thunderbolt',
+        'os_name': 'android',
+        'os_version': '2.3.4',
+        'cell_number': '4258908379',
+        'provider': 'Verizon Wireless',
+        'hub': '01',
+        'hub_port': 'B'
+    },
+    'HT11JS002214': {
         'device_type': 'phone',
         'device_name': 'HTC Thunderbolt',
         'os_name': 'android',
@@ -113,7 +161,27 @@ DEVICE_INFO = {
         'hub': '01',
         'hub_port': 'A'
     },
+    'TA08401PHI': {
+        'device_type': 'phone',
+        'device_name': 'Motorola Droid X2',
+        'os_name': 'android',
+        'os_version': '2.3.4',
+        'cell_number': '4258909336',
+        'provider': 'Verizon Wireless',
+        'hub': '01',
+        'hub_port': 'A'
+    },
     '4342354131485A483144': {
+        'device_type': 'phone',
+        'device_name': 'Sony Ericson Xperia PLAY 4G',
+        'os_name': 'android',
+        'os_version': '2.3.3',
+        'cell_number': '7744208420',
+        'provider': 'AT&T',
+        'hub': '01',
+        'hub_port': 'E'
+    },
+    '43423541314A59474A32': {
         'device_type': 'phone',
         'device_name': 'Sony Ericson Xperia PLAY 4G',
         'os_name': 'android',
@@ -132,6 +200,15 @@ DEVICE_INFO = {
         'hub': '01',
         'hub_port': 'C'
     },
+    '42801C5422043D7': {
+        'device_type': 'tablet',
+        'device_name': 'Samsung Galaxy Tab',
+        'os_name': 'android',
+        'os_version': '3.2',
+        'provider': 'Verizon Wireless',
+        'hub': '01',
+        'hub_port': 'C'
+    },
     '304D191A2004639E': {
         'device_type': 'phone',
         'device_name': 'Samsung Galaxy S II',
@@ -141,7 +218,17 @@ DEVICE_INFO = {
         'provider': 'AT&T',
         'hub': '01',
         'hub_port': 'F'
-    }
+    },
+    '304D19FD2E23B83F': {
+        'device_type': 'phone',
+        'device_name': 'Samsung Galaxy S II',
+        'os_name': 'android',
+        'os_version': '2.3.4',
+        'cell_number': 'unknown',
+        'provider': 'AT&T',
+        'hub': '01',
+        'hub_port': 'F'
+    },
 }
 
 # Shouldn't change for the life of this process.
