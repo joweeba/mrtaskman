@@ -19,6 +19,7 @@ from google.appengine.api import urlfetch
 from google.appengine.api import taskqueue
 from google.appengine.ext import db
 from google.appengine.ext.blobstore import blobstore
+from google.appengine.ext.db import datastore_query
 
 import datetime
 import json
@@ -480,6 +481,26 @@ class DeleteAllByExecutorHandler(webapp2.RequestHandler):
       logging.info('Deleting %d tasks.', len(task_keys))
       count += len(task_keys)
       db.delete(task_keys)
+
+
+def GetResultsAfterDate(after_date, limit, cursor):
+  """Retrieve all Tasks with result info before after_date."""
+  query = Task.all().filter('completed_time >', after_date)
+  if cursor is not None:
+    task_list = query.fetch(
+        limit=limit,
+        start_cursor=datastore_query.Cursor.from_websafe_string(cursor))
+  else:
+    task_list = query.fetch(limit=limit)
+
+  if not task_list:
+    return (task_list, query.cursor())
+
+  # Fetch TaskResults.
+  result_list = db.get([task.__dict__['_result'] for task in task_list])
+  for i in xrange(0, len(task_list)):
+    task_list[i].result = result_list[i]
+  return (task_list, query.cursor())
 
 
 app = webapp2.WSGIApplication([

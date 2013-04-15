@@ -17,6 +17,20 @@ indexes:
 
 - kind: Task
   properties:
+  - name: executor_requirements
+  - name: state
+  - name: completed_time
+    direction: desc
+
+- kind: Task
+  properties:
+  - name: executor_requirements
+  - name: state
+  - name: priority
+    direction: desc
+
+- kind: Task
+  properties:
   - name: name
   - name: scheduled_time
     direction: desc
@@ -36,23 +50,7 @@ indexes:
     direction: desc
 
 - kind: Task
-  ancestor: no
-  properties:
-  - name: executor_requirements
-  - name: state
-  - name: completed_time
-    direction: desc
-
-- kind: Task
   ancestor: yes
-  properties:
-  - name: executor_requirements
-  - name: state
-  - name: priority
-    direction: desc
-
-- kind: Task
-  ancestor: no
   properties:
   - name: executor_requirements
   - name: state

@@ -1,5 +1,5 @@
 application: mrtaskman
-version: 3
+version: 4
 runtime: python27
 api_version: 1
 threadsafe: false
@@ -55,6 +55,10 @@ handlers:
   script: handlers.events.app
 - url: /events
   script: handlers.events.app
+
+# API.
+- url: /api/.*
+  script: handlers.api_handlers.app
 
 # Dash.
 - url: /dash
