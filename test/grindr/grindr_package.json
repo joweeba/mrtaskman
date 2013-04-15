@@ -1,0 +1,15 @@
+{
+  "kind": "mrtaskman#create_package_request",
+  "name": "GrindrPackage",
+  "version": "1",
+  "files": [
+    {
+      "kind": "mrtaskman#form_file",
+      "form_name": "file1",
+      "file_destination": "Grindr.apk",
+      "filename": "Grindr.apk",
+      "client_path": "test/grindr/Grindr.apk",
+      "file_mode": "755"
+    }
+  ]
+}

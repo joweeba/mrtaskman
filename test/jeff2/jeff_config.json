@@ -1,0 +1,24 @@
+{
+  "kind": "mrtaskman#config",
+  "packages": [
+    {
+      "kind": "mrtaskman#packageref",
+      "name": "AndroidMonkeyPackage",
+      "version": 1
+    },
+    {
+      "kind": "mrtaskman#packageref",
+      "name": "ChessPackage",
+      "version": 1
+    }
+  ],
+  "files": [],
+  "task": {
+    "name": "ChessMonkey",
+    "requirements": {
+      "executor": ["jeff"]
+    },
+    "command": "echo 'foo'",
+    "timeout": "5m"
+  }
+}

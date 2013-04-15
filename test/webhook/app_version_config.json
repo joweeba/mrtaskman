@@ -1,0 +1,14 @@
+{
+  "kind": "mrtaskman#config",
+  "packages": [],
+  "files": [],
+  "task": {
+    "name": "InvokeWebhook",
+    "requirements": {
+      "executor": ["local"]
+    },
+    "command": "echo '{}' > ./result_metadata",
+    "webhook": "http://localhost:8080/invalid",
+    "timeout": "300s"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "kind": "mrtaskman#config",
+  "packages": [
+    {
+      "kind": "mrtaskman#packageref",
+      "name": "AndroidLaunchPackage",
+      "version": 1
+    },
+    {
+      "kind": "mrtaskman#packageref",
+      "name": "GrindrPackage",
+      "version": 1
+    }
+  ],
+  "files": [],
+  "task": {
+    "name": "GrindrLaunch",
+    "priority": 110,
+    "requirements": {
+      "executor": ["3233A90D16A800EC"]
+    },
+    "command": "./android_launch.py Grindr.apk",
+    "timeout": "300s",
+    "webhook": "http://mrtaskman.appspot.com/"
+  }
+}

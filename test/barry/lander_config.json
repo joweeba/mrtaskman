@@ -1,0 +1,24 @@
+{
+  "kind": "mrtaskman#config",
+  "packages": [
+    {
+      "kind": "mrtaskman#packageref",
+      "name": "AndroidInstallPackage",
+      "version": 1
+    },
+    {
+      "kind": "mrtaskman#packageref",
+      "name": "AppGraderApkahBzfnV0ZXN0LWFwcGdyYXBoch0LEhREZXZlbG9wZXJVcGxvYWRlZEFQSxi7ndUDDA",
+      "version": 8588511
+    }
+  ],
+  "files": [],
+  "task": {
+    "name": "LunarLanderInstall",
+    "requirements": {
+      "executor": ["jeff"]
+    },
+    "command": "./android_install.py utest_pp_release_V2_0_0_2890.apk.apk",
+    "timeout": "300s"
+  }
+}
