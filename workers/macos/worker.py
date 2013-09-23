@@ -367,7 +367,8 @@ class MacOsWorker(object):
           logging.error('Got HTTPError %d trying to grab package %s.%s: %s',
               e.code, package['name'], package['version'], e)
           raise MrTaskmanUnrecoverableHttpError(e)
-        except (urllib2.URLError, httplib.IncompleteRead), e:
+        except (urllib2.URLError, httplib.IncompleteRead,
+                httplib.BadStatusLine, httplib.HTTPException), e:
           logging.error('Got URLError trying to grab package %s.%s: %s',
               package['name'], package['version'], e)
           logging.info('Retrying in 10')
