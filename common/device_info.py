@@ -313,12 +313,49 @@ except ImportError:
     return []
 
 
-def main(argv):
-  device_ids = sys.stdin.read().split('\n')
+def GetUniqueDeviceIdsFromLines(input_lines):
+  device_id_set = set()
+  for line in input_lines:
+    line = line.strip()
+    GetUniqueDeviceIdsFromLine(line, device_id_set)
+  return device_id_set
+
+
+def GetUniqueDeviceIdsFromLine(line, device_id_set):
+  device_ids = line.split(' ')
   for device_id in device_ids:
+    device_id = device_id.strip()
     if device_id:
-      print '"%s": %s' % (device_id,
-                          json.dumps(GetDeviceInfo(device_id), indent=2))
+      device_id_set.add(device_id)
+
+
+def LookupDeviceInfos(device_id_set):
+  device_infos = []
+  device_ids = []
+  for device_id in device_id_set:
+    device_info = GetDeviceInfo(device_id)
+    if device_info:
+      device_ids.append(device_id)
+      device_infos.append(device_info)
+  return (device_ids, device_infos)
+
+
+def GetAllDeviceInfosForDeviceIdsInMultilineString(multiline_string):
+  input_lines = multiline_string.split('\n')
+  device_id_set = GetUniqueDeviceIdsFromLines(input_lines)
+  (device_ids, device_infos) = LookupDeviceInfos(device_id_set)
+  return zip(device_ids, device_infos)
+
+
+def PrintDeviceInfoMap(device_info_map, indent=2):
+  for (device_id, device_info) in device_info_map:
+    print '%s: %s' % (device_id, json.dumps(device_info, indent=indent))
+
+
+def main(argv):
+  multiline_input = sys.stdin.read()
+  device_info_map = GetAllDeviceInfosForDeviceIdsInMultilineString(multiline_input)
+  PrintDeviceInfoMap(device_info_map, indent=2)
 
 
 if __name__ == '__main__':
